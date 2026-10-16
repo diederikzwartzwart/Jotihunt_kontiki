@@ -243,10 +243,11 @@ a { color: var(--accent); }
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
-  padding: 6px 9px;
-  font-size: .82rem;
+  padding: 6px 8px;
+  font-size: .8rem;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
   text-decoration: line-through;
   text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent);
 }
@@ -534,6 +535,51 @@ textarea { min-height: 70px; resize: vertical; }
   box-shadow: 0 1px 3px rgba(0,0,0,.3);
 }
 .htime::before { display: none; }
+.tcount:not(:empty) { margin-left: 4px; font-variant-numeric: tabular-nums; opacity: .8; }
+.mapbtn button#btnShare[aria-pressed="true"] {
+  background: #1a73e8;
+  color: #fff;
+  border-color: transparent;
+}
+.mapbtn button#btnShare[aria-pressed="true"]::before {
+  content: "";
+  display: inline-block;
+  width: 8px; height: 8px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #fff;
+  vertical-align: 1px;
+  animation: blink 1.6s ease-in-out infinite;
+}
+@keyframes blink { 50% { opacity: .25; } }
+.tm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transform: translate(-14px, -14px);
+  white-space: nowrap;
+}
+.tm .ini {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: #1f2a37;
+  color: #fff;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 5px rgba(0,0,0,.45);
+  display: grid; place-items: center;
+  font: 700 13px/1 var(--font-body);
+  text-transform: uppercase;
+}
+.tm .nm {
+  background: rgba(31,42,55,.9);
+  color: #fff;
+  border-radius: 5px;
+  padding: 2px 6px;
+  font: 600 11px/1.3 var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+.tm.stale { opacity: .5; }
+@media (prefers-reduced-motion: reduce) { .mapbtn button#btnShare[aria-pressed="true"]::before { animation: none; } }
 .me { width: 16px; height: 16px; border-radius: 50%; background: #1a73e8; border: 3px solid #fff; box-shadow: 0 0 0 2px rgba(26,115,232,.35); }
 .leaflet-popup-content { font: 14px/1.4 var(--font-body); }
 .leaflet-popup-content b { font-family: var(--font-display); font-size: 1.05rem; }
@@ -578,13 +624,15 @@ textarea { min-height: 70px; resize: vertical; }
       <div id="map" aria-label="Kaart met hunts en groepen"></div>
       <div class="maphint" id="maphint" hidden>Tik op de kaart waar de hunt was</div>
       <div class="mapbtn">
+        <button type="button" id="btnShare" aria-pressed="false">Deel mijn locatie</button>
         <button type="button" id="btnMe">Mijn locatie</button>
         <button type="button" class="primary" id="btnReport">+ Hunt melden</button>
       </div>
       <div class="maplayers" role="group" aria-label="Kaartlagen">
-        <button type="button" id="btnAreas" aria-pressed="true">Gebieden</button>
+        <button type="button" id="btnAreas" aria-pressed="true">Gebied</button>
         <button type="button" id="btnGroups" aria-pressed="true">Groepen</button>
         <button type="button" id="btnRoutes" aria-pressed="true">Routes</button>
+        <button type="button" id="btnTeam" aria-pressed="true">Team<span class="tcount" id="teamCount"></span></button>
       </div>
     </div>
 
@@ -673,6 +721,7 @@ textarea { min-height: 70px; resize: vertical; }
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script>
 (function () {
   "use strict";
@@ -1197,6 +1246,189 @@ textarea { min-height: 70px; resize: vertical; }
       setTimeout(function () { $("btnMe").textContent = "Mijn locatie"; }, 2500);
     }, { enableHighAccuracy: true, timeout: 15000 });
   });
+
+  // ---------- live locaties van het team (alleen op de kaart, geen meldingen) ----------
+  // Via twee gratis MQTT-servers tegelijk, zodat het blijft werken als er één uitvalt.
+  // Elk apparaat zet zijn laatste positie als "retained" bericht klaar; wie de kaart opent ziet meteen iedereen.
+  var BROKERS = ["wss://broker.hivemq.com:8884/mqtt", "wss://broker.emqx.io:8084/mqtt"];
+  var teamBase = "vossenkaart/" + code + "/loc/";
+  var TEAM_STALE = 5 * 60000, TEAM_HIDE = 60 * 60000;
+  var deviceId = store.get("deviceId", null);
+  if (!deviceId || !/^[a-z0-9]{8,32}$/.test(deviceId)) {
+    deviceId = uid().replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 16);
+    store.set("deviceId", deviceId);
+  }
+  var teamLayer = L.layerGroup();
+  var team = {};
+  var clients = [];
+  var sharing = false, shareWatch = null, lastPos = null, lastSent = null, wakeLock = null;
+
+  function initials(n) {
+    var p = n.trim().split(/\s+/);
+    return ((p[0] || "?").charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : "")).toUpperCase();
+  }
+  function ageTxt(t) {
+    var s = Math.round((Date.now() - t) / 1000);
+    if (s < 90) return "nu";
+    var m = Math.round(s / 60);
+    return m < 60 ? m + " min" : Math.floor(m / 60) + " u";
+  }
+  function memberPopup(id) {
+    return function () {
+      var m = team[id], p = el("div");
+      if (!m) return p;
+      p.appendChild(el("b", null, m.n));
+      p.appendChild(el("div", null, "Gezien om " + hhmm(m.t) + " (" + (ageTxt(m.t) === "nu" ? "zojuist" : ageTxt(m.t) + " geleden") + ")"));
+      if (m.acc) p.appendChild(el("div", "muted", "Nauwkeurig tot ±" + m.acc + " m"));
+      p.appendChild(navLink(m.lat, m.lon, "Navigeer naar " + m.n));
+      return p;
+    };
+  }
+  function renderMember(id) {
+    var m = team[id];
+    if (!m) return;
+    var age = Date.now() - m.t;
+    if (age > TEAM_HIDE) {
+      if (m.marker) { teamLayer.removeLayer(m.marker); m.marker = null; }
+      return;
+    }
+    var box = el("div", "tm" + (age > TEAM_STALE ? " stale" : ""));
+    box.appendChild(el("span", "ini", initials(m.n)));
+    box.appendChild(el("span", "nm", m.n + " · " + ageTxt(m.t)));
+    var icon = L.divIcon({ className: "", html: box, iconSize: [0, 0] });
+    if (!m.marker) {
+      m.marker = L.marker([m.lat, m.lon], { icon: icon, zIndexOffset: 1500 }).addTo(teamLayer);
+      m.marker.bindPopup(memberPopup(id));
+    } else {
+      m.marker.setLatLng([m.lat, m.lon]);
+      m.marker.setIcon(icon);
+    }
+  }
+  function updateTeamCount() {
+    var n = Object.keys(team).filter(function (id) { return team[id].marker; }).length;
+    $("teamCount").textContent = n ? String(n) : "";
+  }
+  function removeMember(id) {
+    if (team[id] && team[id].marker) teamLayer.removeLayer(team[id].marker);
+    delete team[id];
+    updateTeamCount();
+  }
+  function onTeamMessage(topic, payload) {
+    var id = topic.slice(teamBase.length);
+    if (!/^[a-z0-9]{8,32}$/.test(id) || id === deviceId) return;
+    var s = payload.toString();
+    if (!s) { removeMember(id); return; }
+    var d;
+    try { d = JSON.parse(s); } catch (e) { return; }
+    if (!d || !isFinite(d.lat) || !isFinite(d.lon) || !isFinite(d.t)) return;
+    if (team[id] && team[id].t >= d.t) return; // ouder bericht (bijv. van de tweede server)
+    var m = team[id] || (team[id] = {});
+    m.n = String(d.n || "Onbekend").slice(0, 30);
+    m.lat = +d.lat; m.lon = +d.lon;
+    m.acc = isFinite(d.acc) && d.acc ? Math.round(d.acc) : null;
+    m.t = Math.min(+d.t, Date.now());
+    renderMember(id);
+    updateTeamCount();
+  }
+  function connectTeam() {
+    if (!window.mqtt) { $("btnTeam").hidden = true; $("btnShare").hidden = true; return; }
+    BROKERS.forEach(function (url) {
+      var c = mqtt.connect(url, {
+        clientId: "vk-" + deviceId + "-" + Math.random().toString(16).slice(2, 6),
+        connectTimeout: 10000, reconnectPeriod: 5000, keepalive: 30, clean: true
+      });
+      c.on("connect", function () {
+        c.subscribe(teamBase + "+", { qos: 0 });
+        if (sharing && lastSent) publishTo(c, lastSent);
+      });
+      c.on("message", onTeamMessage);
+      c.on("error", function () {});
+      clients.push(c);
+    });
+  }
+  function publishTo(c, payload) {
+    if (c.connected) c.publish(teamBase + deviceId, payload, { qos: 0, retain: true });
+  }
+  function myName() { return $("huntBy").value.trim().slice(0, 30); }
+  var sentMeta = null; // {t, lat, lon} van het laatst verstuurde bericht
+  function sendPos(p) {
+    lastPos = p;
+    var now = Date.now();
+    var payload = JSON.stringify({ n: myName() || "Onbekend", lat: +p.lat.toFixed(6), lon: +p.lon.toFixed(6), acc: p.acc ? Math.round(p.acc) : null, t: now });
+    lastSent = payload;
+    sentMeta = { t: now, lat: p.lat, lon: p.lon };
+    clients.forEach(function (c) { publishTo(c, payload); });
+  }
+  // versturen bij >= 30 m verplaatsing of na 45 s
+  function shouldSend(p) {
+    if (!sentMeta) return true;
+    return Date.now() - sentMeta.t >= 45000 || map.distance([p.lat, p.lon], [sentMeta.lat, sentMeta.lon]) >= 30;
+  }
+  function onSharePos(gp) {
+    showMe(gp);
+    var p = { lat: gp.coords.latitude, lon: gp.coords.longitude, acc: gp.coords.accuracy };
+    lastPos = p;
+    if (shouldSend(p)) sendPos(p);
+  }
+  function requestWake() {
+    if (!sharing || !navigator.wakeLock || document.visibilityState !== "visible") return;
+    navigator.wakeLock.request("screen").then(function (l) { wakeLock = l; }, function () {});
+  }
+  function setSharing(on) {
+    if (on && !myName()) {
+      showTab("report");
+      if (window.innerWidth < 900) $("pane-report").scrollIntoView({ behavior: "smooth", block: "start" });
+      $("huntBy").focus();
+      alertMsg("Vul eerst je naam in bij 'Wie' en tik daarna opnieuw op Deel mijn locatie.", "err");
+      return;
+    }
+    if (on && !navigator.geolocation) return;
+    sharing = on;
+    store.set("sharing", on);
+    $("btnShare").setAttribute("aria-pressed", on ? "true" : "false");
+    $("btnShare").textContent = on ? "Locatie wordt gedeeld" : "Deel mijn locatie";
+    if (on) {
+      shareWatch = navigator.geolocation.watchPosition(onSharePos, function () {
+        setSharing(false);
+        $("btnShare").textContent = "Geen GPS-toestemming";
+        setTimeout(function () { $("btnShare").textContent = "Deel mijn locatie"; }, 3000);
+      }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 30000 });
+      requestWake();
+      var hint = $("maphint");
+      hint.textContent = "Je locatie is zichtbaar voor je groep zolang deze pagina open is.";
+      hint.hidden = false;
+      setTimeout(function () { hint.hidden = true; hint.textContent = "Tik op de kaart waar de hunt was"; }, 4000);
+    } else {
+      if (shareWatch != null) navigator.geolocation.clearWatch(shareWatch);
+      shareWatch = null;
+      sentMeta = null; lastSent = null;
+      clients.forEach(function (c) { if (c.connected) c.publish(teamBase + deviceId, "", { qos: 0, retain: true }); });
+      if (wakeLock) { wakeLock.release().catch(function () {}); wakeLock = null; }
+    }
+  }
+  $("btnShare").addEventListener("click", function () { setSharing(!sharing); });
+  // stilstaan: elke minuut opnieuw versturen zodat de groep ziet dat je er nog bent
+  setInterval(function () { if (sharing && lastPos) sendPos(lastPos); }, 60000);
+  // namen/leeftijden bijwerken
+  setInterval(function () { Object.keys(team).forEach(renderMember); updateTeamCount(); }, 20000);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") {
+      requestWake();
+      if (sharing && lastPos) sendPos(lastPos);
+    }
+  });
+
+  var teamShown = store.get("team", true);
+  function setTeamShown(v) {
+    teamShown = v;
+    store.set("team", v);
+    $("btnTeam").setAttribute("aria-pressed", v ? "true" : "false");
+    if (v) teamLayer.addTo(map); else map.removeLayer(teamLayer);
+  }
+  setTeamShown(teamShown);
+  $("btnTeam").addEventListener("click", function () { setTeamShown(!teamShown); });
+  connectTeam();
+  if (store.get("sharing", false)) setTimeout(function () { setSharing(true); }, 500);
 
   // ---------- hunt melden ----------
   var selArea = store.get("lastArea", null);
