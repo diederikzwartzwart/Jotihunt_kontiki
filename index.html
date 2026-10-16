@@ -673,15 +673,6 @@ textarea { min-height: 70px; resize: vertical; }
   pointer-events: none;
   opacity: .9;
 }
-.pnum {
-  width: 18px; height: 18px; border-radius: 50%;
-  background: #fff; color: var(--c);
-  border: 2px solid var(--c);
-  display: grid; place-items: center;
-  font: 700 11px/1 var(--font-body);
-  font-variant-numeric: tabular-nums;
-  box-shadow: 0 1px 3px rgba(0,0,0,.35);
-}
 .arrow { width: 20px; height: 20px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
 .arrow svg { display: block; }
 .htime {
@@ -806,9 +797,7 @@ textarea { min-height: 70px; resize: vertical; }
         <button type="button" id="btnAreas" aria-pressed="true">Gebied</button>
         <button type="button" id="btnGroups" aria-pressed="true">Groepen</button>
         <button type="button" id="btnRoutes" aria-pressed="true">Routes</button>
-        <button type="button" id="btnTeam" aria-pressed="true">Team<span class="tcount" id="teamCount"></span></button>
-        <button type="button" id="btnPredict" aria-pressed="true" title="Voorspelde looproute van de vossen langs de clubhuizen">Voorspel</button>
-      </div>
+        <button type="button" id="btnTeam" aria-pressed="true">Team<span class="tcount" id="teamCount"></span></button>      </div>
     </div>
 
     <aside class="panel">
@@ -1485,17 +1474,9 @@ textarea { min-height: 70px; resize: vertical; }
       m.addTo(groupLayer);
     });
     renderGlow();
-    renderPrediction();
   }
 
-  // ---------- voorspelling: looproute van het vossenteam langs alle clubhuizen in het gebied ----------
-  // Vossen lopen langs elk clubhuis. Start bij de laatste melding (hunt/spot/hint) in het gebied;
-  // clubhuizen binnen 600 m van een eerdere melding tellen als al bezocht. Volgorde: kortste wandelroute
-  // (dichtstbijzijnde eerst, daarna verbeterd met 2-opt). Afstand hemelsbreed x 1,25 voor omwegen, 5 km/u.
-  var predictLayer = L.layerGroup();
-  var VISITED_RADIUS = 600, WALK_KMH = 5, DETOUR = 1.25;
-
-  // Afgevinkte clubhuizen (iedereen kan afvinken; de laatste keuze per clubhuis telt)
+  // ---------- afgevinkte clubhuizen (iedereen kan afvinken; de laatste keuze per clubhuis telt) ----------
   function gidOf(g) { return String(g.id != null ? g.id : g.name).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40); }
   function visitOf(g) { var v = visits[gidOf(g)]; return v && v.on ? v : null; }
   function visitPoints() {
@@ -1515,106 +1496,6 @@ textarea { min-height: 70px; resize: vertical; }
     saveItems();
     renderGroups();
     renderHunts();
-  }
-  var predictShown = store.get("predict", true);
-  function setPredictShown(v) {
-    predictShown = v;
-    store.set("predict", v);
-    $("btnPredict").setAttribute("aria-pressed", v ? "true" : "false");
-    if (v) predictLayer.addTo(map); else map.removeLayer(predictLayer);
-  }
-  setPredictShown(predictShown);
-  $("btnPredict").addEventListener("click", function () { setPredictShown(!predictShown); });
-
-  function pathLen(pts) {
-    var s = 0;
-    for (var i = 1; i < pts.length; i++) s += map.distance(pts[i - 1].ll, pts[i].ll);
-    return s;
-  }
-  function nnOrder(start, rest) {
-    var path = [start], left = rest.slice();
-    while (left.length) {
-      var cur = path[path.length - 1], bi = 0, bd = Infinity;
-      left.forEach(function (p, i) { var d = map.distance(cur.ll, p.ll); if (d < bd) { bd = d; bi = i; } });
-      path.push(left.splice(bi, 1)[0]);
-    }
-    return path;
-  }
-  // 2-opt voor een open route (geen terugweg); bij een vaste start blijft punt 0 staan
-  function twoOpt(pts, fixedStart) {
-    var n = pts.length, improved = true, guard = 0;
-    while (improved && guard++ < 50) {
-      improved = false;
-      for (var i = fixedStart ? 1 : 0; i < n - 1; i++) {
-        for (var k = i + 1; k < n; k++) {
-          var a = i > 0 ? pts[i - 1].ll : null, b = pts[i].ll, c = pts[k].ll, d = k + 1 < n ? pts[k + 1].ll : null;
-          var before = (a ? map.distance(a, b) : 0) + (d ? map.distance(c, d) : 0);
-          var after = (a ? map.distance(a, c) : 0) + (d ? map.distance(b, d) : 0);
-          if (after < before - 1) {
-            var seg = pts.slice(i, k + 1).reverse();
-            for (var j = 0; j < seg.length; j++) pts[i + j] = seg[j];
-            improved = true;
-          }
-        }
-      }
-    }
-    return pts;
-  }
-  function fmtDuration(h) {
-    var m = Math.round(h * 60);
-    return m < 60 ? m + " min" : Math.floor(m / 60) + " u " + pad(m % 60);
-  }
-  function renderPrediction() {
-    predictLayer.clearLayers();
-    if (!groupsData.length || !items) return;
-    activeAreas().forEach(function (area) {
-      if (filterArea !== "all" && filterArea !== area) return;
-      var groups = groupsData
-        .filter(function (g) { return g.area === area && isFinite(parseFloat(g.lat)) && isFinite(parseFloat(g.long)); })
-        .map(function (g) { return { ll: [parseFloat(g.lat), parseFloat(g.long)], name: g.name, visited: !!visitOf(g) }; });
-      if (!groups.length) return;
-      // alles wat we weten over waar de vossen waren: meldingen + afgevinkte clubhuizen
-      var seen = Object.keys(items).map(function (k) { return items[k]; })
-        .filter(function (h) { return h.area === area && !deleted[h.id]; })
-        .concat(visitPoints().filter(function (p) { return p.area === area; }))
-        .sort(function (a, b) { return a.t - b.t; });
-      var last = seen.length ? seen[seen.length - 1] : null;
-      var todo = groups.filter(function (g) {
-        return !g.visited && !seen.some(function (h) { return map.distance(g.ll, [h.lat, h.lon]) < VISITED_RADIUS; });
-      });
-      if (!todo.length) return;
-      var path;
-      if (last) {
-        path = twoOpt(nnOrder({ ll: [last.lat, last.lon], start: true }, todo), true);
-      } else {
-        // geen melding: probeer elk clubhuis als begin en neem de kortste route
-        path = null;
-        todo.forEach(function (g, i) {
-          var cand = twoOpt(nnOrder(g, todo.filter(function (_, j) { return j !== i; })), false);
-          if (!path || pathLen(cand) < pathLen(path)) path = cand;
-        });
-      }
-      var meters = pathLen(path) * DETOUR;
-      var col = AREA_COLORS[area];
-      var tip = "Voorspelde looproute " + area + ": nog " + todo.length + " clubhuis" + (todo.length === 1 ? "" : "en") +
-        " · ±" + fmtKm(meters) + " lopen (~" + fmtDuration(meters / 1000 / WALK_KMH) + ")" +
-        (!last ? " (nog geen melding, beste beginpunt gekozen)"
-          : last.kind === "visit" ? " vanaf het clubhuis dat om " + hhmm(last.t) + " is afgevinkt"
-          : " vanaf de " + KIND_LABEL[last.kind].toLowerCase() + " van " + hhmm(last.t));
-      if (path.length > 1) {
-        L.polyline(path.map(function (p) { return p.ll; }), { color: col, weight: 3, opacity: .9, dashArray: "1 8", lineCap: "round" })
-          .bindTooltip(tip, { sticky: true })
-          .addTo(predictLayer);
-      }
-      path.forEach(function (p, i) {
-        if (p.start) return;
-        var nr = last ? i : i + 1;
-        L.marker(p.ll, {
-          keyboard: false,
-          icon: L.divIcon({ className: "", html: '<div class="pnum" style="--c:' + col + '">' + nr + "</div>", iconSize: [18, 18], iconAnchor: [9, 27] })
-        }).bindTooltip(area + " · stop " + nr + ": " + p.name, { direction: "top" }).addTo(predictLayer);
-      });
-    });
   }
   fetch(API + "/subscriptions")
     .then(function (r) { return r.json(); })
@@ -1781,7 +1662,6 @@ textarea { min-height: 70px; resize: vertical; }
     markers = {};
     // looproute: meldingen + afgevinkte clubhuizen, op volgorde van tijd
     renderRoutes(list.concat(visitPoints().filter(function (p) { return areaOn(p.area) && (filterArea === "all" || p.area === filterArea); })));
-    renderPrediction();
     list.slice().reverse().forEach(function (h) {
       var age = Date.now() - h.t;
       var fresh = h.kind === "hunt" && age < 3600000;
