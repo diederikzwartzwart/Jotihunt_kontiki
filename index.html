@@ -1009,10 +1009,10 @@ textarea { min-height: 70px; resize: vertical; }
   // Wordt ingevuld door wachtwoorden-instellen.py (versleuteld; zonder wachtwoord onleesbaar)
   var CONFIG = /*CONFIG-START*/{"v":2,"id":"a91cf7fc","iter":210000,"user":{"salt":"hP0iYoDBuoapD2vvvEqOKA==","iv":"6nShkScIZFdDrHoc","ct":"NU5is5OVo8c54cLDjmUZcZGMCpvDGy3olrY9NpVt/0CQ6peuZrlCS3Iptzf2hvgo+qeVFVka3y+TrCyf"},"admin":{"salt":"mkm7/U746OHumFzcgdBuOQ==","iv":"2/3lHwp/ZYhtinHi","ct":"qq1ZbRtHJ3+uuJ4pN8X133r/Mnn9uVsMFwVeTKmfTluxOINziNAaDg3vVzUA9DD3MKivlDO6g+GQaXtc/j5YBCdImiRsrh2drGNQiIQs17Us5wXg7rMfKKNHk4gOgAfcccMc4YK2nEPN9d4gSNXij5so6XFDe7UynhlhWO4TDyvrnhwUzzgWaG0UywvMKiCgVpu0iGSDjMsZIIVJOYTPAcjQJqz0xulL9TIpP2+ibmlWixk/k0D+sv710a5iiWs+yW70TQ+CUIjOgo0kWaYapyyvbar+LWmxNmYFsIIvp/t+ZWKkf5QUYEjremmeB/JBE/o8tZ2sogGWaUcVC2uADUlIgh+DzmPyWrGoS07+ykR7g7B6cohwTmdMjCPF9ExpDLSEq83Qj4Nlysc5AwQClamh7l6LWXUhR/D3sWROGOVYBfAzEa5w/DdxjL0kU8gOtmc0RHWEIXXFUrmlvJi6Ju4T6Ub95GUBg7CTiNX9PUmhOeNG+wBRzJNQ"},"signPub":{"x":"uCpVVOodpFk7agvi9B-3uMPLwU_wlTkREtBF6TFP0P4","y":"bfd5nx77czLYWRquPi70xIik3edBCC2rPgvV310u5Po"},"encPub":{"x":"JjpweW3QZWbpCKm0RMiFCsaxEKyrKB0B8OF7fXT5fHE","y":"o9tQhEz3F_sfVi5LgpcU-Z3dLBrADtR8QatjSS95sP4"}}/*CONFIG-END*/;
 
-  // Kleuren per deelgebied, zoals op jotihunt.nl/subscriptions/map
+  // Kleuren per deelgebied: zelfde volgorde als op jotihunt.nl, maar verder uit elkaar zodat buurgebieden goed te onderscheiden zijn
   var AREA_COLORS = {
-    Alpha: "#c2413a", Bravo: "#b85c16", Charlie: "#a67c00", Delta: "#2f855a",
-    Echo: "#0f766e", Foxtrot: "#2563a6", Golf: "#6d5ba7", Hotel: "#a33d6b", Oscar: "#5b6470"
+    Alpha: "#d1203a", Bravo: "#e06600", Charlie: "#b58900", Delta: "#2b9348",
+    Echo: "#0089b8", Foxtrot: "#2440b8", Golf: "#7b2cbf", Hotel: "#c2187a", Oscar: "#5b6470"
   };
   var AREAS = Object.keys(AREA_COLORS);
   var STATUS_LABEL = { red: "Rood", orange: "Oranje", green: "Groen", yellow: "Geel" };
