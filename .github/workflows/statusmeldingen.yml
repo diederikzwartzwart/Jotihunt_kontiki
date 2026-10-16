@@ -42,7 +42,7 @@ jobs:
           RUN_MINUTES: "345"
           INTERVAL_SECONDS: "30"
           # in UTC: NL-tijd (zomertijd) min 2 uur
-          WINDOW_START: "2026-10-17T06:30:00Z"
+          WINDOW_START: "2026-10-17T07:30:00Z"
           WINDOW_END: "2026-10-18T10:30:00Z"
         run: |
           python3 -u - <<'EOF'
