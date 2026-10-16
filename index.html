@@ -747,7 +747,7 @@ textarea { min-height: 70px; resize: vertical; }
           <li>Je krijgt een melding als dat gebied van status wisselt of als iemand daar een hunt meldt.</li>
         </ol>
         <div class="subs" id="subs"></div>
-        <p class="small muted">Kies óf <b>Alle gebieden</b>, óf losse gebieden. Allebei geeft dubbele meldingen.</p>
+        <p class="small muted">Wil je alles volgen? Abonneer dan op alle gebieden. In de ntfy-app kun je per kanaal het geluid en de prioriteit instellen.</p>
 
         <p class="label">Deel met je groep</p>
         <div class="share">
@@ -833,7 +833,6 @@ textarea { min-height: 70px; resize: vertical; }
   }
   if (location.hash.replace(/^#/, "") !== code) history.replaceState(null, "", "#" + code);
 
-  var topicAll = code;
   var topicData = code + "-data";
   function topicArea(a) { return code + "-" + a.toLowerCase(); }
 
@@ -1710,16 +1709,13 @@ textarea { min-height: 70px; resize: vertical; }
           (h.huntcode ? "\nHuntcode: " + h.huntcode : "") +
           "\nWeer huntbaar om " + hhmm(next) + ". Tik om de plek te openen.";
         var note = { title: title, message: text, tags: ["fox_face"], priority: 4, click: mapsUrl(h.lat, h.lon) };
-        var sends = [
-          publish(Object.assign({ topic: topicArea(h.area) }, note)).catch(function () {}),
-          publish(Object.assign({ topic: topicAll }, note)).catch(function () {})
-        ];
+        // Alleen naar het kanaal van het gebied: elk bericht telt mee voor de ntfy-daglimiet (250 per verbinding)
+        var sends = [publish(Object.assign({ topic: topicArea(h.area) }, note)).catch(function () {})];
         // Geplande melding (ntfy stuurt hem zelf op het juiste moment): vos mag weer gehunt worden
         var delaySec = Math.round((next - Date.now()) / 1000);
         if (delaySec >= 30) {
           var again = { title: h.area + " mag weer gehunt worden", message: "Het uur na de hunt van " + hhmm(h.t) + " is voorbij.", tags: ["alarm_clock"], priority: 4, delay: delaySec + "s" };
           sends.push(publish(Object.assign({ topic: topicArea(h.area) }, again)).catch(function () {}));
-          sends.push(publish(Object.assign({ topic: topicAll }, again)).catch(function () {}));
         }
         return Promise.all(sends);
       })
@@ -1760,7 +1756,6 @@ textarea { min-height: 70px; resize: vertical; }
       r.appendChild(acts);
       w.appendChild(r);
     }
-    row("Alle gebieden", topicAll, "var(--fg)");
     AREAS.forEach(function (a) { row(a, topicArea(a), AREA_COLORS[a]); });
   }
   function copy(text, btn) {
