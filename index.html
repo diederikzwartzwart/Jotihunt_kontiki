@@ -27,6 +27,7 @@
   --danger: #b3261e;
   --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
   --radius: 10px;
   color-scheme: light;
 }
@@ -78,6 +79,7 @@ body {
 button, input, select, textarea { font: inherit; color: inherit; }
 a { color: var(--accent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+body:not(.is-admin) .admin-only { display: none !important; }
 
 .app {
   min-height: 100%;
@@ -121,37 +123,11 @@ a { color: var(--accent); }
   padding: 4px 11px;
   font-size: .85rem;
   font-weight: 600;
-  max-width: 42vw;
+  max-width: 46vw;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
-}
-.dlg {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  background: rgba(10, 14, 12, .55);
-  display: grid;
-  place-items: center;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-}
-.dlgbox {
-  width: 100%;
-  max-width: 400px;
-  background: var(--surface);
-  color: var(--fg);
-  border-radius: 14px;
-  padding: 20px;
-  box-shadow: 0 10px 40px rgba(0,0,0,.35);
-}
-.dlgbox h2 { margin: 0; font-family: var(--font-display); font-size: 1.6rem; }
-.dlgbox p { margin: 0; }
-.dist { font-variant-numeric: tabular-nums; }
-@media (max-width: 480px) {
-  .conn span { display: none; }
-  .brand small { display: none; }
 }
 .conn {
   margin-left: auto;
@@ -168,6 +144,34 @@ a { color: var(--accent); }
 }
 .conn[data-ok="1"] i { background: var(--st-green); }
 .conn[data-ok="0"] i { background: var(--st-red); }
+@media (max-width: 480px) {
+  .conn span { display: none; }
+  .brand small { display: none; }
+}
+
+/* Dialogen */
+.dlg {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(10, 14, 12, .55);
+  display: grid;
+  place-items: center;
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
+  overflow-y: auto;
+}
+.dlgbox {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  color: var(--fg);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.35);
+}
+.dlgbox h2 { margin: 0; font-family: var(--font-display); font-size: 1.6rem; }
+.dlgbox p { margin: 0; }
+.dist { font-variant-numeric: tabular-nums; }
 
 /* Statusstrook */
 .status {
@@ -338,6 +342,7 @@ a { color: var(--accent); }
   color: var(--muted);
   border-bottom: 3px solid transparent;
   cursor: pointer;
+  white-space: nowrap;
 }
 .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
 .tabs .count {
@@ -350,6 +355,11 @@ a { color: var(--accent); }
   padding: 0 7px;
   margin-left: 4px;
   vertical-align: 2px;
+}
+@media (max-width: 480px) {
+  .tabs { padding-left: max(2px, env(safe-area-inset-left, 0px)); padding-right: max(2px, env(safe-area-inset-right, 0px)); }
+  .tabs button { font-size: .88rem; letter-spacing: .02em; padding: 11px 2px 9px; }
+  .tabs .count { padding: 0 5px; margin-left: 2px; }
 }
 .tabpane {
   padding-block: 14px 28px;
@@ -373,6 +383,8 @@ a { color: var(--accent); }
 }
 .muted { color: var(--muted); }
 .small { font-size: .85rem; }
+.sect { display: flex; flex-direction: column; gap: 12px; padding-top: 6px; border-top: 1px solid var(--line); }
+.sect:first-child { border-top: 0; padding-top: 0; }
 
 /* Filter */
 .filter { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -391,7 +403,7 @@ a { color: var(--accent); }
 .filter button i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .filter button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 
-/* Huntlijst */
+/* Lijst met hunts, spots en hints */
 .hunts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .hunt {
   display: grid;
@@ -402,24 +414,42 @@ a { color: var(--accent); }
   border-bottom: 1px solid var(--line);
 }
 .hunt:last-child { border-bottom: 0; }
+.hunt.clickable { cursor: pointer; }
 .badge {
   width: 38px; height: 38px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   color: #fff;
+  background: var(--c, #1f2a37);
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 1.2rem;
 }
+.badge.spot { background: var(--surface); color: var(--c); border: 3px solid var(--c); }
+.badge.hint { width: 30px; height: 30px; margin: 4px; border-radius: 5px; transform: rotate(45deg); font-size: 1rem; }
+.badge.hint span { transform: rotate(-45deg); }
 .hunt .body { min-width: 0; }
 .hunt .head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
 .hunt .head b { font-family: var(--font-display); font-size: 1.15rem; letter-spacing: .02em; }
 .hunt .time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .85rem; }
 .hunt .note { margin-top: 2px; overflow-wrap: anywhere; }
+.kind {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: .75rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.kind.hunt { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 .hcode {
   display: inline-block;
-  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   font-size: .85rem;
   letter-spacing: .04em;
@@ -430,7 +460,7 @@ a { color: var(--accent); }
   overflow-wrap: anywhere;
 }
 .areas .cd { margin-left: auto; font-size: .75rem; }
-#huntCode { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .04em; text-transform: uppercase; }
+#huntCode { font-family: var(--font-mono); letter-spacing: .04em; }
 .hunt .acts { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
 .linkbtn {
   border: 0; background: none; padding: 2px 0;
@@ -452,7 +482,9 @@ a { color: var(--accent); }
 .field > label, .field > .label { font-weight: 600; font-size: .9rem; color: var(--fg); font-family: var(--font-body); letter-spacing: 0; text-transform: none; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
 .row > * { flex: 1 1 140px; min-width: 0; }
-input[type="text"], input[type="time"], select, textarea {
+.inline { display: flex; gap: 8px; }
+.inline > input { flex: 1; min-width: 0; }
+input[type="text"], input[type="time"], input[type="password"], select, textarea {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -480,6 +512,7 @@ textarea { min-height: 70px; resize: vertical; }
   flex: 1; border: 0; background: var(--surface-2); padding: 10px; font-weight: 600; cursor: pointer;
 }
 .seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.seg.big button { font-family: var(--font-display); font-size: 1.1rem; letter-spacing: .05em; text-transform: uppercase; padding: 11px; }
 .loc {
   font-variant-numeric: tabular-nums;
   font-size: .9rem;
@@ -500,12 +533,19 @@ textarea { min-height: 70px; resize: vertical; }
   font-size: 1.15rem;
   letter-spacing: .04em;
   cursor: pointer;
+  text-align: center;
+  text-decoration: none;
 }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .btn.ghost { background: var(--surface-2); color: var(--fg); border: 1px solid var(--line); font-family: var(--font-body); font-size: .95rem; font-weight: 600; letter-spacing: 0; padding: 9px 12px; }
+.btn.danger { background: var(--danger); color: #fff; }
+.btn.small { font-size: .9rem; padding: 7px 10px; }
 .msg { font-weight: 600; font-size: .9rem; }
 .msg[data-kind="err"] { color: var(--danger); }
 .msg[data-kind="ok"] { color: var(--st-green); }
+.thumb { display: flex; gap: 12px; align-items: center; }
+.thumb img { width: 76px; height: 76px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.qrinfo { font-size: .85rem; overflow-wrap: anywhere; }
 
 /* Meldingen */
 .subs { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
@@ -525,30 +565,90 @@ textarea { min-height: 70px; resize: vertical; }
 .sub code { font-size: .78rem; color: var(--muted); overflow-wrap: anywhere; }
 .sub .acts { display: flex; gap: 12px; }
 .steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
-.share {
-  display: flex; gap: 8px; align-items: stretch;
-}
+.share { display: flex; gap: 8px; align-items: stretch; }
 .share input { flex: 1; min-width: 0; font-size: .85rem; }
 
-/* Setup */
+/* Beheer */
+.toggles { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.toggle {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  cursor: pointer;
+  font-weight: 600;
+}
+.toggle:last-child { border-bottom: 0; }
+.toggle i { width: 12px; height: 12px; border-radius: 50%; }
+.toggle span { margin-left: auto; font-size: .8rem; color: var(--muted); font-weight: 600; }
+.toggle input { width: 20px; height: 20px; accent-color: var(--accent); margin: 0; }
+.toggle:has(input:not(:checked)) { opacity: .6; }
+
+/* Inloggen */
 .setup {
-  max-width: 460px;
-  margin: 40px auto;
+  max-width: 420px;
+  margin: 48px auto;
   padding-inline: 16px;
   display: flex; flex-direction: column; gap: 14px;
 }
-.setup h1 { font-family: var(--font-display); font-size: 2rem; margin: 0; text-wrap: balance; }
+.setup h1 { font-family: var(--font-display); font-size: 2.2rem; margin: 0; text-wrap: balance; }
+.setup p { margin: 0; }
+
+/* Detailvenster */
+.detail { max-width: 880px; padding: 0; overflow: hidden; }
+.detail-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.detail-head h2 { font-size: 1.5rem; }
+.detail-head .x {
+  margin-left: auto;
+  border: 1px solid var(--line); background: var(--surface-2);
+  border-radius: 8px; width: 38px; height: 38px; font-size: 1.2rem; cursor: pointer;
+}
+.detail-body { display: grid; grid-template-columns: 1fr; gap: 18px; padding: 18px; }
+@media (min-width: 760px) { .detail-body.has-photo { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); } }
+.photo-box {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  min-height: 160px;
+  display: grid; place-items: center;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: .9rem;
+  text-align: center;
+  padding: 0;
+}
+.photo-box a { display: block; width: 100%; }
+.photo-box img { width: 100%; height: auto; display: block; }
+.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 9px 16px; align-items: baseline; margin: 0; }
+.kv dt { color: var(--muted); font-size: .85rem; }
+.kv dd { margin: 0; display: flex; gap: 8px 12px; align-items: baseline; flex-wrap: wrap; min-width: 0; overflow-wrap: anywhere; }
+.val { font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.detail-acts { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 18px 18px; }
+.detail-acts > * { flex: 1 1 150px; }
+
+/* Scanner */
+.scanbox { display: flex; flex-direction: column; gap: 12px; }
+.scanbox video { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: #000; }
 
 /* Kaartmarkers */
 .hm {
   width: 30px; height: 30px; border-radius: 50%;
   border: 3px solid #fff;
+  background: var(--c);
   box-shadow: 0 1px 5px rgba(0,0,0,.45);
   display: grid; place-items: center;
   color: #fff;
   font: 700 15px/1 var(--font-display);
+  cursor: pointer;
 }
 .hm.fresh { width: 36px; height: 36px; font-size: 18px; animation: pulse 2s ease-out infinite; }
+.hm.spot { background: #fff; color: var(--c); border-color: var(--c); }
+.hm.hint { width: 26px; height: 26px; border-radius: 5px; transform: rotate(45deg); }
+.hm.hint span { transform: rotate(-45deg); }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0,0,0,.45); } 70% { box-shadow: 0 0 0 14px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
 .leaflet-glow-pane { opacity: .32; }
 .alabel {
@@ -619,7 +719,6 @@ textarea { min-height: 70px; resize: vertical; }
   font-variant-numeric: tabular-nums;
 }
 .tm.stale { opacity: .5; }
-@media (prefers-reduced-motion: reduce) { .mapbtn button#btnShare[aria-pressed="true"]::before { animation: none; } }
 .me { width: 16px; height: 16px; border-radius: 50%; background: #1a73e8; border: 3px solid #fff; box-shadow: 0 0 0 2px rgba(26,115,232,.35); }
 .leaflet-popup-content { font: 14px/1.4 var(--font-body); }
 .leaflet-popup-content b { font-family: var(--font-display); font-size: 1.05rem; }
@@ -638,6 +737,7 @@ textarea { min-height: 70px; resize: vertical; }
 
 @media (prefers-reduced-motion: reduce) {
   .hm.fresh, .chip.flash { animation: none; }
+  .mapbtn button#btnShare[aria-pressed="true"]::before { animation: none; }
 }
 
 /* Breed scherm: paneel naast de kaart */
@@ -645,13 +745,26 @@ textarea { min-height: 70px; resize: vertical; }
   .app { height: 100%; }
   .main { flex-direction: row; }
   .mapwrap { flex: 1; height: auto; }
-  .panel { width: 400px; border-top: 0; border-left: 1px solid var(--line); }
+  .panel { width: 420px; border-top: 0; border-left: 1px solid var(--line); }
   .tabpane { flex: 1; }
 }
 </style>
 </head>
 <body>
-<div class="app" id="app">
+<div class="setup" id="login" hidden>
+  <h1>Vossenkaart</h1>
+  <p>Vul het wachtwoord van je groep in.</p>
+  <form class="form" id="loginForm">
+    <div class="field">
+      <label for="loginPw">Wachtwoord</label>
+      <input type="password" id="loginPw" autocomplete="current-password" required>
+    </div>
+    <button class="btn" type="submit" id="loginBtn">Inloggen</button>
+    <div class="msg" id="loginMsg" role="status"></div>
+  </form>
+</div>
+
+<div class="app" id="app" hidden>
   <header class="top">
     <h1 class="brand">Vossenkaart<small>Jotihunt</small></h1>
     <div class="conn" id="conn" title="Verbinding met het huntkanaal"><i></i><span id="connText">Verbinden…</span></div>
@@ -662,12 +775,12 @@ textarea { min-height: 70px; resize: vertical; }
 
   <div class="main">
     <div class="mapwrap">
-      <div id="map" aria-label="Kaart met hunts en groepen"></div>
-      <div class="maphint" id="maphint" hidden>Tik op de kaart waar de hunt was</div>
+      <div id="map" aria-label="Kaart met hunts, spots, hints en groepen"></div>
+      <div class="maphint" id="maphint" hidden>Tik op de kaart waar het was</div>
       <div class="mapbtn">
         <button type="button" id="btnShare" aria-pressed="false">Deel mijn locatie</button>
         <button type="button" id="btnMe">Mijn locatie</button>
-        <button type="button" class="primary" id="btnReport">+ Hunt melden</button>
+        <button type="button" class="primary" id="btnReport">+ Hunt / spot</button>
       </div>
       <div class="maplayers" role="group" aria-label="Kaartlagen">
         <button type="button" id="btnAreas" aria-pressed="true">Gebied</button>
@@ -683,24 +796,44 @@ textarea { min-height: 70px; resize: vertical; }
         <button type="button" role="tab" id="tab-report" aria-controls="pane-report" aria-selected="false">Melden</button>
         <button type="button" role="tab" id="tab-team" aria-controls="pane-team" aria-selected="false">Team<span class="count" id="teamTabCount" hidden></span></button>
         <button type="button" role="tab" id="tab-notify" aria-controls="pane-notify" aria-selected="false">Meldingen</button>
+        <button type="button" role="tab" id="tab-admin" aria-controls="pane-admin" aria-selected="false" class="admin-only">Beheer</button>
       </div>
 
       <section class="tabpane" id="pane-hunts" role="tabpanel" aria-labelledby="tab-hunts">
         <div class="filter" id="filter" aria-label="Filter op deelgebied"></div>
         <ul class="hunts" id="huntList"></ul>
-        <div class="empty" id="huntEmpty">Nog geen hunts. Tik op <b>+ Hunt melden</b> zodra jullie een vos gehunt hebben; hij verschijnt dan direct op ieders kaart.</div>
+        <div class="empty" id="huntEmpty">Nog niets gemeld. Tik op <b>+ Hunt / spot</b> zodra jullie een vos gehunt of gezien hebben; het verschijnt dan direct op ieders kaart.</div>
       </section>
 
       <section class="tabpane" id="pane-report" role="tabpanel" aria-labelledby="tab-report" hidden>
         <form class="form" id="reportForm" novalidate>
+          <div class="seg big" role="group" aria-label="Soort melding">
+            <button type="button" id="kindHunt" aria-pressed="true">Hunt</button>
+            <button type="button" id="kindSpot" aria-pressed="false">Spot</button>
+          </div>
+          <p class="small muted" id="kindHelp">Een hunt: jullie hebben de vos gevonden. Start het uur aftellen voor dit gebied.</p>
           <div class="field">
             <span class="label">Deelgebied</span>
             <div class="areas" id="areaPick" role="radiogroup" aria-label="Deelgebied"></div>
             <div class="msg" id="areaWarn" data-kind="err" hidden></div>
           </div>
-          <div class="field">
+          <div class="field" id="codeField">
             <label for="huntCode">Huntcode</label>
-            <input type="text" id="huntCode" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="code van de vos">
+            <div class="inline">
+              <input type="text" id="huntCode" maxlength="80" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="code van de vos">
+              <button type="button" class="btn ghost" id="btnScan">Scan QR</button>
+            </div>
+            <div class="qrinfo" id="qrInfo" hidden></div>
+            <p class="small muted">Alleen jij en de admins kunnen de code zien.</p>
+          </div>
+          <div class="field">
+            <span class="label">Foto <span class="muted">(optioneel, alleen voor jou en de admins)</span></span>
+            <div class="thumb" id="photoPreview" hidden>
+              <img id="photoImg" alt="Gekozen foto">
+              <button type="button" class="btn ghost small" id="photoRemove">Foto weghalen</button>
+            </div>
+            <label class="btn ghost" for="photoInput" id="photoPick">Foto maken of kiezen</label>
+            <input type="file" id="photoInput" accept="image/*" hidden>
           </div>
           <div class="field">
             <span class="label">Locatie</span>
@@ -737,6 +870,10 @@ textarea { min-height: 70px; resize: vertical; }
         <ul class="hunts" id="teamList"></ul>
         <div class="empty" id="teamEmpty">Nog niemand deelt zijn locatie. Tik op <b>Deel mijn locatie</b>; je groep ziet je dan op de kaart en in deze lijst.</div>
         <p class="small muted">Je ziet alleen wie zelf zijn locatie deelt, zolang de Vossenkaart bij die persoon open staat. Locaties ouder dan een uur verdwijnen.</p>
+        <div class="sect">
+          <p class="small muted" id="roleText"></p>
+          <button type="button" class="btn ghost" id="btnLogout">Uitloggen</button>
+        </div>
       </section>
 
       <section class="tabpane" id="pane-notify" role="tabpanel" aria-labelledby="tab-notify" hidden>
@@ -744,17 +881,71 @@ textarea { min-height: 70px; resize: vertical; }
         <ol class="steps">
           <li>Installeer de gratis app <b>ntfy</b> (Play Store / App Store).</li>
           <li>Tik hieronder op <b>Abonneren</b> bij de gebieden die jij wilt volgen. Werkt de knop niet, tik dan in de app op <b>+</b> en plak de kanaalnaam.</li>
-          <li>Je krijgt een melding als dat gebied van status wisselt of als iemand daar een hunt meldt.</li>
+          <li>Je krijgt een melding bij een statuswissel, een hunt, een spot of een nieuwe hint in dat gebied.</li>
         </ol>
         <div class="subs" id="subs"></div>
         <p class="small muted">Wil je alles volgen? Abonneer dan op alle gebieden. In de ntfy-app kun je per kanaal het geluid en de prioriteit instellen.</p>
 
         <p class="label">Deel met je groep</p>
         <div class="share">
-          <input type="text" id="shareUrl" readonly aria-label="Link voor je groep">
+          <input type="text" id="shareUrl" readonly aria-label="Link naar de Vossenkaart">
           <button type="button" class="btn ghost" id="btnCopy">Kopieer</button>
         </div>
-        <p class="small muted">Iedereen met deze link kan hunts zien en melden. Deel hem alleen in jullie eigen groepsapp.</p>
+        <p class="small muted">Deel de link en het user-wachtwoord in jullie eigen groepsapp. Het admin-wachtwoord alleen met de admins.</p>
+      </section>
+
+      <section class="tabpane admin-only" id="pane-admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
+        <div class="sect">
+          <p class="label">Opgeloste hint plaatsen</p>
+          <form class="form" id="hintForm" novalidate>
+            <div class="row">
+              <div class="field">
+                <label for="hintArea">Deelgebied</label>
+                <select id="hintArea"></select>
+              </div>
+              <div class="field">
+                <label for="hintTime">Tijd van de hint</label>
+                <input type="time" id="hintTime" required>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="hintX">RD X (m)</label>
+                <input type="text" id="hintX" inputmode="numeric" autocomplete="off" placeholder="bijv. 190123">
+              </div>
+              <div class="field">
+                <label for="hintY">RD Y (m)</label>
+                <input type="text" id="hintY" inputmode="numeric" autocomplete="off" placeholder="bijv. 444567">
+              </div>
+            </div>
+            <div class="field">
+              <label for="hintLatLon">Of in graden (lat, lon)</label>
+              <div class="inline">
+                <input type="text" id="hintLatLon" inputmode="decimal" autocomplete="off" placeholder="bijv. 52.0123, 5.9876">
+                <button type="button" class="btn ghost" id="hintPick">Kies op kaart</button>
+              </div>
+            </div>
+            <div class="loc" id="hintLoc">Nog geen locatie</div>
+            <div class="field">
+              <label for="hintNote">Notitie <span class="muted">(optioneel)</span></label>
+              <input type="text" id="hintNote" maxlength="120" autocomplete="off" placeholder="bijv. hint 3, moeilijke route">
+            </div>
+            <button class="btn" type="submit" id="hintSubmit" disabled>Hint plaatsen</button>
+            <div class="msg" id="hintMsg" role="status"></div>
+          </form>
+        </div>
+        <div class="sect">
+          <p class="label">Deelgebieden tonen</p>
+          <p class="small muted">Een uitgeschakeld gebied is voor iedereen onzichtbaar: status, kaart, hunts, spots en hints. Er wordt niets gewist; zet je het weer aan, dan staat alles er weer.</p>
+          <div class="toggles" id="areaToggles"></div>
+          <div class="msg" id="areaMsg" role="status"></div>
+        </div>
+        <div class="sect">
+          <p class="label">Exporteren</p>
+          <p class="small muted">Alle hunts, spots en hints met huntcodes en RD-coördinaten, als CSV voor Excel.</p>
+          <button type="button" class="btn ghost" id="btnExport">Exporteer alles (CSV)</button>
+          <div class="msg" id="exportMsg" role="status"></div>
+        </div>
       </section>
     </aside>
   </div>
@@ -763,7 +954,7 @@ textarea { min-height: 70px; resize: vertical; }
 <div class="dlg" id="nameDlg" hidden role="dialog" aria-modal="true" aria-labelledby="nameDlgTitle">
   <form class="dlgbox form" id="nameForm">
     <h2 id="nameDlgTitle">Hoe heet je?</h2>
-    <p class="small muted">Je groep ziet deze naam bij je hunts en, als je hem deelt, bij je locatie op de kaart. Tip: zet je auto of rol erbij.</p>
+    <p class="small muted">Je groep ziet deze naam bij je meldingen en, als je hem deelt, bij je locatie op de kaart. Tip: zet je auto of rol erbij.</p>
     <div class="field">
       <label for="nameInput">Naam</label>
       <input type="text" id="nameInput" maxlength="30" autocomplete="nickname" placeholder="bijv. Sanne – auto 3" required>
@@ -775,23 +966,40 @@ textarea { min-height: 70px; resize: vertical; }
   </form>
 </div>
 
-<div class="setup" id="setup" hidden>
-  <h1>Vossenkaart</h1>
-  <p>Open deze pagina via de link die je groep heeft gedeeld, of vul hieronder jullie groepscode in.</p>
-  <form class="form" id="setupForm">
-    <div class="field">
-      <label for="setupCode">Groepscode</label>
-      <input type="text" id="setupCode" placeholder="jotihunt-…" autocomplete="off" required pattern="[A-Za-z0-9_-]{6,64}">
+<div class="dlg" id="detailDlg" hidden role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+  <div class="dlgbox detail">
+    <div class="detail-head">
+      <span class="badge" id="detailBadge"></span>
+      <h2 id="detailTitle">Hunt</h2>
+      <button type="button" class="x" id="detailClose" aria-label="Sluiten">✕</button>
     </div>
-    <button class="btn" type="submit">Openen</button>
-  </form>
+    <div class="detail-body" id="detailBody"></div>
+    <div class="detail-acts" id="detailActs"></div>
+  </div>
+</div>
+
+<div class="dlg" id="scanDlg" hidden role="dialog" aria-modal="true" aria-labelledby="scanTitle">
+  <div class="dlgbox scanbox">
+    <h2 id="scanTitle">QR-code scannen</h2>
+    <video id="scanVideo" playsinline muted></video>
+    <div class="msg" id="scanMsg" role="status">Richt de camera op de QR-code.</div>
+    <div class="row">
+      <label class="btn ghost" for="scanFile">Foto van QR-code</label>
+      <button type="button" class="btn ghost" id="scanClose">Annuleren</button>
+    </div>
+    <input type="file" id="scanFile" accept="image/*" capture="environment" hidden>
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
-(function () {
+(async function () {
   "use strict";
+
+  // Wordt ingevuld door wachtwoorden-instellen.py (versleuteld; zonder wachtwoord onleesbaar)
+  var CONFIG = /*CONFIG-START*/{"v":2,"id":"a91cf7fc","iter":210000,"user":{"salt":"hP0iYoDBuoapD2vvvEqOKA==","iv":"6nShkScIZFdDrHoc","ct":"NU5is5OVo8c54cLDjmUZcZGMCpvDGy3olrY9NpVt/0CQ6peuZrlCS3Iptzf2hvgo+qeVFVka3y+TrCyf"},"admin":{"salt":"mkm7/U746OHumFzcgdBuOQ==","iv":"2/3lHwp/ZYhtinHi","ct":"qq1ZbRtHJ3+uuJ4pN8X133r/Mnn9uVsMFwVeTKmfTluxOINziNAaDg3vVzUA9DD3MKivlDO6g+GQaXtc/j5YBCdImiRsrh2drGNQiIQs17Us5wXg7rMfKKNHk4gOgAfcccMc4YK2nEPN9d4gSNXij5so6XFDe7UynhlhWO4TDyvrnhwUzzgWaG0UywvMKiCgVpu0iGSDjMsZIIVJOYTPAcjQJqz0xulL9TIpP2+ibmlWixk/k0D+sv710a5iiWs+yW70TQ+CUIjOgo0kWaYapyyvbar+LWmxNmYFsIIvp/t+ZWKkf5QUYEjremmeB/JBE/o8tZ2sogGWaUcVC2uADUlIgh+DzmPyWrGoS07+ykR7g7B6cohwTmdMjCPF9ExpDLSEq83Qj4Nlysc5AwQClamh7l6LWXUhR/D3sWROGOVYBfAzEa5w/DdxjL0kU8gOtmc0RHWEIXXFUrmlvJi6Ju4T6Ub95GUBg7CTiNX9PUmhOeNG+wBRzJNQ"},"signPub":{"x":"uCpVVOodpFk7agvi9B-3uMPLwU_wlTkREtBF6TFP0P4","y":"bfd5nx77czLYWRquPi70xIik3edBCC2rPgvV310u5Po"},"encPub":{"x":"JjpweW3QZWbpCKm0RMiFCsaxEKyrKB0B8OF7fXT5fHE","y":"o9tQhEz3F_sfVi5LgpcU-Z3dLBrADtR8QatjSS95sP4"}}/*CONFIG-END*/;
 
   // Kleuren per deelgebied, zoals op jotihunt.nl/subscriptions/map
   var AREA_COLORS = {
@@ -800,41 +1008,60 @@ textarea { min-height: 70px; resize: vertical; }
   };
   var AREAS = Object.keys(AREA_COLORS);
   var STATUS_LABEL = { red: "Rood", orange: "Oranje", green: "Groen", yellow: "Geel" };
+  var KIND_LABEL = { hunt: "Hunt", spot: "Spot", hint: "Hint" };
   var API = "https://jotihunt.nl/api/2.0";
   var NTFY = "https://ntfy.sh";
   var CODE_RE = /^[A-Za-z0-9_-]{6,64}$/;
+  var ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
   var HUNT_INTERVAL = 60 * 60000; // een vos mag 1x per uur gehunt worden
+  // Twee gratis MQTT-servers tegelijk; HiveMQ neemt grote berichten (foto's), EMQX alleen kleine
+  var BROKERS = [
+    { url: "wss://broker.hivemq.com:8884/mqtt", maxPhoto: 250000 },
+    { url: "wss://broker.emqx.io:8084/mqtt", maxPhoto: 55000 }
+  ];
+  var subtle = window.crypto && window.crypto.subtle;
+  var enc = new TextEncoder(), dec = new TextDecoder();
 
   // ---------- opslag (alleen gemak per apparaat) ----------
   var store = {
     get: function (k, d) { try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+    del: function (k) { try { localStorage.removeItem(k); } catch (e) {} }
   };
-
-  // ---------- groepscode ----------
-  function readCode() {
-    var h = decodeURIComponent((location.hash || "").replace(/^#/, ""));
-    if (CODE_RE.test(h)) { store.set("code", h); return h; }
-    var s = store.get("code", null);
-    return CODE_RE.test(s || "") ? s : null;
-  }
-  var code = readCode();
-  if (!code) {
-    document.getElementById("app").hidden = true;
-    document.getElementById("setup").hidden = false;
-    document.getElementById("setupForm").addEventListener("submit", function (e) {
-      e.preventDefault();
-      var v = document.getElementById("setupCode").value.trim();
-      if (!CODE_RE.test(v)) return;
-      location.hash = v;
-      location.reload();
-    });
-    return;
-  }
-  if (location.hash.replace(/^#/, "") !== code) history.replaceState(null, "", "#" + code);
-
-  var topicData = code + "-data";
-  function topicArea(a) { return code + "-" + a.toLowerCase(); }
+  // Foto's (te groot voor localStorage) in IndexedDB
+  var idb = (function () {
+    var p = null;
+    function open() {
+      if (!p) p = new Promise(function (res, rej) {
+        var r = indexedDB.open("vossenkaart", 1);
+        r.onupgradeneeded = function () { r.result.createObjectStore("photos"); };
+        r.onsuccess = function () { res(r.result); };
+        r.onerror = function () { rej(r.error); };
+      });
+      return p;
+    }
+    return {
+      get: function (k) {
+        return open().then(function (db) {
+          return new Promise(function (res) {
+            var q = db.transaction("photos").objectStore("photos").get(k);
+            q.onsuccess = function () { res(q.result || null); };
+            q.onerror = function () { res(null); };
+          });
+        }).catch(function () { return null; });
+      },
+      set: function (k, v) {
+        return open().then(function (db) {
+          return new Promise(function (res) {
+            var tx = db.transaction("photos", "readwrite");
+            tx.objectStore("photos").put(v, k);
+            tx.oncomplete = function () { res(true); };
+            tx.onerror = function () { res(false); };
+          });
+        }).catch(function () { return false; });
+      }
+    };
+  })();
 
   // ---------- helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -876,14 +1103,201 @@ textarea { min-height: 70px; resize: vertical; }
     var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
     return (h ? h + ":" + pad(m) : m) + ":" + pad(r);
   }
+  function fmtKm(m) { return m < 1000 ? Math.round(m) + " m" : (m / 1000).toFixed(1).replace(".", ",") + " km"; }
+  function timeToday(v) {
+    var parts = String(v || "").split(":");
+    var d = new Date(); d.setHours(+parts[0], +parts[1], 0, 0);
+    if (d.getTime() - Date.now() > 10 * 60000) d.setDate(d.getDate() - 1); // tijd na middernacht ingevuld voor gisteren
+    return d.getTime();
+  }
+  function nowTime() { var d = new Date(); return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function copy(text, btn) {
+    var done = function () { if (!btn) return; var o = btn.textContent; btn.textContent = "Gekopieerd"; setTimeout(function () { btn.textContent = o; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+    } else { fallbackCopy(text); done(); }
+  }
+  function fallbackCopy(text) {
+    var t = el("textarea"); t.value = text; document.body.appendChild(t); t.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    t.remove();
+  }
+  function copyBtn(text, label) {
+    var b = el("button", "linkbtn", label || "Kopieer");
+    b.type = "button";
+    b.addEventListener("click", function (e) { e.stopPropagation(); copy(text, b); });
+    return b;
+  }
+
+  // ---------- base64 ----------
+  function b64(bytes) {
+    var s = "", b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    for (var i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+  function unb64(s) {
+    var bin = atob(s), b = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+    return b;
+  }
+  function b64url(bytes) { return b64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+  function unb64url(s) { s = String(s).replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; return unb64(s); }
+
+  // ---------- Rijksdriehoeksmeting (RD New, EPSG:28992), benaderingsformules, nauwkeurig tot ~1 m ----------
+  var RD_X0 = 155000, RD_Y0 = 463000, RD_LAT0 = 52.15517440, RD_LON0 = 5.38720621;
+  var RD_R = [[0, 1, 190094.945], [1, 1, -11832.228], [2, 1, -114.221], [0, 3, -32.391], [1, 0, -0.705], [3, 1, -2.340], [1, 3, -0.608], [0, 2, -0.008], [2, 3, 0.148]];
+  var RD_S = [[1, 0, 309056.544], [0, 2, 3638.893], [2, 0, 73.077], [1, 2, -157.984], [3, 0, 59.788], [0, 1, 0.433], [2, 2, -6.439], [1, 1, -0.032], [0, 4, 0.092], [1, 4, -0.054]];
+  var RD_K = [[0, 1, 3235.65389], [2, 0, -32.58297], [0, 2, -0.24750], [2, 1, -0.84978], [0, 3, -0.06550], [2, 2, -0.01709], [1, 0, -0.00738], [4, 0, 0.00530], [2, 3, -0.00039], [4, 1, 0.00033], [1, 1, -0.00012]];
+  var RD_L = [[1, 0, 5260.52916], [1, 1, 105.94684], [1, 2, 2.45656], [3, 0, -0.81885], [1, 3, 0.05594], [3, 1, -0.05607], [0, 1, 0.01199], [3, 2, -0.00256], [1, 4, 0.00128], [0, 2, 0.00022], [2, 0, -0.00022], [5, 0, 0.00026]];
+  function toRD(lat, lon) {
+    var dp = 0.36 * (lat - RD_LAT0), dl = 0.36 * (lon - RD_LON0), x = RD_X0, y = RD_Y0;
+    RD_R.forEach(function (c) { x += c[2] * Math.pow(dp, c[0]) * Math.pow(dl, c[1]); });
+    RD_S.forEach(function (c) { y += c[2] * Math.pow(dp, c[0]) * Math.pow(dl, c[1]); });
+    return { x: Math.round(x), y: Math.round(y) };
+  }
+  function fromRD(x, y) {
+    var dx = (x - RD_X0) * 1e-5, dy = (y - RD_Y0) * 1e-5, lat = RD_LAT0, lon = RD_LON0;
+    RD_K.forEach(function (c) { lat += c[2] * Math.pow(dx, c[0]) * Math.pow(dy, c[1]) / 3600; });
+    RD_L.forEach(function (c) { lon += c[2] * Math.pow(dx, c[0]) * Math.pow(dy, c[1]) / 3600; });
+    return { lat: lat, lon: lon };
+  }
+  function rdText(lat, lon) { var r = toRD(lat, lon); return "RD " + r.x + ", " + r.y; }
+
+  // ---------- inloggen ----------
+  async function openBlob(pw, blob) {
+    var base = await subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveKey"]);
+    var key = await subtle.deriveKey({ name: "PBKDF2", salt: unb64(blob.salt), iterations: CONFIG.iter, hash: "SHA-256" },
+      base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    var pt = await subtle.decrypt({ name: "AES-GCM", iv: unb64(blob.iv) }, key, unb64(blob.ct));
+    return JSON.parse(dec.decode(pt));
+  }
+  function tryLogin(pw) {
+    // beide tegelijk proberen; het admin-wachtwoord wint
+    var attempt = function (blob) { return openBlob(pw, blob).catch(function () { return null; }); };
+    return Promise.all([attempt(CONFIG.admin), attempt(CONFIG.user)]).then(function (r) { return r[0] || r[1]; });
+  }
+  function validSession(s) {
+    return !!(s && CONFIG && s.cfg === CONFIG.id && CODE_RE.test(s.code || "") &&
+      (s.role === "user" || (s.role === "admin" && s.sign && s.enc)));
+  }
+  function showLogin() {
+    return new Promise(function (resolve) {
+      $("app").hidden = true;
+      $("login").hidden = false;
+      if (!CONFIG || !subtle) {
+        $("loginForm").hidden = true;
+        $("loginMsg").dataset.kind = "err";
+        $("loginMsg").textContent = !subtle
+          ? "Deze browser kan niet versleutelen. Open de Vossenkaart via https in een recente browser."
+          : "Er zijn nog geen wachtwoorden ingesteld (wachtwoorden-instellen.py).";
+        $("login").appendChild($("loginMsg"));
+        return;
+      }
+      setTimeout(function () { $("loginPw").focus(); }, 50);
+      $("loginForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var pw = $("loginPw").value;
+        if (!pw) return;
+        $("loginBtn").disabled = true;
+        $("loginMsg").dataset.kind = "";
+        $("loginMsg").textContent = "Controleren…";
+        tryLogin(pw).then(function (o) {
+          $("loginBtn").disabled = false;
+          if (!o || !CODE_RE.test(o.code || "")) {
+            $("loginMsg").dataset.kind = "err";
+            $("loginMsg").textContent = "Onbekend wachtwoord. Controleer het en probeer opnieuw.";
+            $("loginPw").select();
+            return;
+          }
+          var s = { cfg: CONFIG.id, role: o.role === "admin" ? "admin" : "user", code: o.code, sign: o.sign || null, enc: o.enc || null };
+          store.set("session2", s);
+          $("loginPw").value = "";
+          resolve(s);
+        });
+      });
+    });
+  }
+  var session = store.get("session2", null);
+  if (!validSession(session)) {
+    store.del("session2");
+    store.del("code");
+    session = await showLogin();
+  }
+  $("login").hidden = true;
+  $("app").hidden = false;
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+
+  var code = session.code;
+  var isAdmin = session.role === "admin";
+  document.body.classList.toggle("is-admin", isAdmin);
+  var topicData = code + "-data";
+  function topicArea(a) { return code + "-" + a.toLowerCase(); }
+  var mqBase = "vossenkaart/" + code + "/";
+
+  // ---------- sleutels: handtekeningen (admin-acties) en versleuteling (codes/foto's voor admins) ----------
+  var signPub = null, encPub = null, signPriv = null, encPriv = null;
+  try {
+    var EC = { kty: "EC", crv: "P-256", ext: true };
+    signPub = await subtle.importKey("jwk", Object.assign({}, EC, CONFIG.signPub), { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+    encPub = await subtle.importKey("jwk", Object.assign({}, EC, CONFIG.encPub), { name: "ECDH", namedCurve: "P-256" }, false, []);
+    if (isAdmin) {
+      signPriv = await subtle.importKey("jwk", Object.assign({}, EC, session.sign), { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+      encPriv = await subtle.importKey("jwk", Object.assign({}, EC, session.enc), { name: "ECDH", namedCurve: "P-256" }, false, ["deriveKey"]);
+    }
+  } catch (e) { console.error("Sleutels laden mislukt", e); }
+
+  function sigString(d) {
+    if (d.type === "delete") return JSON.stringify(["delete", d.id, d.t]);
+    if (d.type === "hint") return JSON.stringify(["hint", d.id, d.area, d.lat, d.lon, d.t, d.note || "", d.by || ""]);
+    if (d.type === "areas") return JSON.stringify(["areas", (d.disabled || []).join(","), d.t]);
+    return null;
+  }
+  async function signEvent(d) {
+    var s = await subtle.sign({ name: "ECDSA", hash: "SHA-256" }, signPriv, enc.encode(sigString(d)));
+    d.sig = b64url(new Uint8Array(s));
+    return d;
+  }
+  async function verifyEvent(d) {
+    try {
+      var str = sigString(d);
+      if (!str || typeof d.sig !== "string" || !signPub) return false;
+      return await subtle.verify({ name: "ECDSA", hash: "SHA-256" }, signPub, unb64url(d.sig), enc.encode(str));
+    } catch (e) { return false; }
+  }
+  // Versleutelen voor de admins: tijdelijke ECDH-sleutel + AES-GCM. Formaat: [1][65 bytes publieke sleutel][12 bytes iv][data]
+  async function seal(bytes) {
+    var eph = await subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]);
+    var key = await subtle.deriveKey({ name: "ECDH", public: encPub }, eph.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var ct = new Uint8Array(await subtle.encrypt({ name: "AES-GCM", iv: iv }, key, bytes));
+    var raw = new Uint8Array(await subtle.exportKey("raw", eph.publicKey));
+    var out = new Uint8Array(1 + raw.length + 12 + ct.length);
+    out[0] = 1; out.set(raw, 1); out.set(iv, 1 + raw.length); out.set(ct, 13 + raw.length);
+    return out;
+  }
+  async function unseal(buf) {
+    if (!encPriv) throw new Error("geen admin");
+    buf = new Uint8Array(buf);
+    if (buf[0] !== 1) throw new Error("onbekend formaat");
+    var pub = await subtle.importKey("raw", buf.slice(1, 66), { name: "ECDH", namedCurve: "P-256" }, false, []);
+    var key = await subtle.deriveKey({ name: "ECDH", public: pub }, encPriv, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    return new Uint8Array(await subtle.decrypt({ name: "AES-GCM", iv: buf.slice(66, 78) }, key, buf.slice(78)));
+  }
+  async function sealText(obj) { return b64(await seal(enc.encode(JSON.stringify(obj)))); }
+  async function openText(s) { return JSON.parse(dec.decode(await unseal(unb64(s)))); }
+
+  // ---------- gebieden aan/uit (door admins, ondertekend) ----------
+  var areaCfg = store.get("areas:" + code, { disabled: [], t: 0 });
+  function areaOn(a) { return areaCfg.disabled.indexOf(a) < 0; }
+  function activeAreas() { return AREAS.filter(areaOn); }
 
   // ---------- aftellen: een vos mag 1x per uur gehunt worden ----------
   function lastHuntAt(area) {
     var t = 0;
-    if (!hunts) return 0;
-    Object.keys(hunts).forEach(function (k) {
-      var h = hunts[k];
-      if (h.area === area && !deleted[h.id] && h.t > t) t = h.t;
+    if (!items) return 0;
+    Object.keys(items).forEach(function (k) {
+      var h = items[k];
+      if (h.kind === "hunt" && h.area === area && !deleted[h.id] && h.t > t) t = h.t;
     });
     return t;
   }
@@ -899,7 +1313,7 @@ textarea { min-height: 70px; resize: vertical; }
     }
     var w = $("areaWarn");
     if (w) {
-      var n = selArea ? nextAllowed(selArea) : 0;
+      var n = selArea && reportKind === "hunt" ? nextAllowed(selArea) : 0;
       if (n > now) { w.hidden = false; w.textContent = selArea + " is nog niet weer huntbaar: nog " + mmss(n - now) + " (vanaf " + hhmm(n) + ")."; }
       else w.hidden = true;
     }
@@ -927,7 +1341,7 @@ textarea { min-height: 70px; resize: vertical; }
   var huntLayer = L.layerGroup().addTo(map);
   var meMarker = null, meCircle = null, pickMarker = null;
 
-  // Looproutes: per gebied een lijn van hunt naar hunt (op volgorde van tijd) met richtingspijlen
+  // Looproutes: per gebied een lijn langs hints, spots en hunts (op volgorde van tijd) met richtingspijlen
   var routesShown = store.get("routes", true);
   function setRoutesShown(v) {
     routesShown = v;
@@ -944,7 +1358,6 @@ textarea { min-height: 70px; resize: vertical; }
     var p2 = map.options.crs.latLngToPoint(L.latLng(b.lat, b.lon), 10);
     return Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
   }
-  function fmtKm(m) { return m < 1000 ? Math.round(m) + " m" : (m / 1000).toFixed(1).replace(".", ",") + " km"; }
   function renderRoutes(list) {
     routeLayer.clearLayers();
     var byArea = {};
@@ -959,9 +1372,9 @@ textarea { min-height: 70px; resize: vertical; }
         var line = L.polyline([[a.lat, a.lon], [b.lat, b.lon]], { color: col, weight: 4, opacity: .85, dashArray: "8 7", lineCap: "round" });
         line.bindTooltip(area + " " + hhmm(a.t) + " → " + hhmm(b.t) + " · " + fmtKm(dist) + " in " + mins + " min", { sticky: true });
         line.addTo(routeLayer);
-        // pijl halverwege, wijst van de oudere naar de nieuwere hunt
+        // pijl halverwege, wijst van de oudere naar de nieuwere melding
         var mid = [(a.lat + b.lat) / 2, (a.lon + b.lon) / 2];
-        var arrow = L.marker(mid, {
+        L.marker(mid, {
           interactive: false,
           keyboard: false,
           icon: L.divIcon({
@@ -970,15 +1383,16 @@ textarea { min-height: 70px; resize: vertical; }
             iconSize: [20, 20],
             iconAnchor: [10, 10]
           })
-        });
-        arrow.addTo(routeLayer);
+        }).addTo(routeLayer);
       }
     });
   }
 
   // ---------- status per deelgebied ----------
-  var lastStatus = {};
+  var lastStatus = {}, lastAreas = null;
   function renderStatus(list) {
+    if (list) lastAreas = list;
+    list = (lastAreas || []).filter(function (a) { return areaOn(a.name); });
     var wrap = $("status");
     var first = !wrap.children.length;
     wrap.textContent = "";
@@ -1004,13 +1418,14 @@ textarea { min-height: 70px; resize: vertical; }
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function (j) { renderStatus(j.data || []); })
       .catch(function () {
-        if (!$("status").children.length) renderStatus(AREAS.map(function (n) { return { name: n, status: "?" }; }));
+        if (!lastAreas) renderStatus(AREAS.map(function (n) { return { name: n, status: "?" }; }));
       });
   }
   loadStatus();
   setInterval(loadStatus, 60000);
 
   // ---------- groepen op de kaart ----------
+  var groupsData = [];
   var groupsShown = store.get("groups", true);
   function setGroupsShown(v) {
     groupsShown = v;
@@ -1020,44 +1435,43 @@ textarea { min-height: 70px; resize: vertical; }
   }
   setGroupsShown(groupsShown);
   $("btnGroups").addEventListener("click", function () { setGroupsShown(!groupsShown); });
+  function renderGroups() {
+    groupLayer.clearLayers();
+    groupsData.forEach(function (g) {
+      var lat = parseFloat(g.lat), lon = parseFloat(g.long);
+      if (!isFinite(lat) || !isFinite(lon) || !areaOn(g.area)) return;
+      var col = AREA_COLORS[g.area] || "#5b6470";
+      var m = L.circleMarker([lat, lon], { radius: 7, color: "#fff", weight: 2, fillColor: col, fillOpacity: .85 });
+      var p = el("div");
+      p.appendChild(el("b", null, g.name));
+      p.appendChild(el("div", null, (g.accomodation ? g.accomodation + ", " : "") + (g.city || "")));
+      p.appendChild(el("div", null, [g.street, g.housenumber, g.housenumber_addition].filter(Boolean).join(" ")));
+      p.appendChild(el("div", "muted", "Deelgebied " + g.area + " · " + rdText(lat, lon)));
+      p.appendChild(navLink(lat, lon));
+      m.bindPopup(p);
+      m.addTo(groupLayer);
+    });
+    renderGlow();
+  }
   fetch(API + "/subscriptions")
     .then(function (r) { return r.json(); })
-    .then(function (j) {
-      (j.data || []).forEach(function (g) {
-        var lat = parseFloat(g.lat), lon = parseFloat(g.long);
-        if (!isFinite(lat) || !isFinite(lon)) return;
-        var col = AREA_COLORS[g.area] || "#5b6470";
-        var m = L.circleMarker([lat, lon], { radius: 7, color: "#fff", weight: 2, fillColor: col, fillOpacity: .85 });
-        var p = el("div");
-        p.appendChild(el("b", null, g.name));
-        p.appendChild(el("div", null, (g.accomodation ? g.accomodation + ", " : "") + (g.city || "")));
-        p.appendChild(el("div", null, [g.street, g.housenumber, g.housenumber_addition].filter(Boolean).join(" ")));
-        p.appendChild(el("div", "muted", "Deelgebied " + g.area));
-        p.appendChild(navLink(lat, lon));
-        m.bindPopup(p);
-        m.addTo(groupLayer);
-      });
-      renderGlow(j.data || []);
-    })
+    .then(function (j) { groupsData = j.data || []; renderGroups(); })
     .catch(function () {});
 
   var GLOW_RINGS = [[9000, .35], [6500, .6], [4000, 1]]; // [straal in m, sterkte]
-  function renderGlow(groups) {
+  function renderGlow() {
     glowLayer.clearLayers();
     labelLayer.clearLayers();
+    var groups = groupsData.filter(function (g) { return AREA_COLORS[g.area] && areaOn(g.area) && isFinite(parseFloat(g.lat)) && isFinite(parseFloat(g.long)); });
     var sum = {};
     GLOW_RINGS.forEach(function (ring) {
       groups.forEach(function (g) {
-        var lat = parseFloat(g.lat), lon = parseFloat(g.long), col = AREA_COLORS[g.area];
-        if (!isFinite(lat) || !isFinite(lon) || !col) return;
-        L.circle([lat, lon], { radius: ring[0], renderer: glowRenderer, stroke: false, fillColor: col, fillOpacity: ring[1], interactive: false }).addTo(glowLayer);
+        L.circle([parseFloat(g.lat), parseFloat(g.long)], { radius: ring[0], renderer: glowRenderer, stroke: false, fillColor: AREA_COLORS[g.area], fillOpacity: ring[1], interactive: false }).addTo(glowLayer);
       });
     });
     groups.forEach(function (g) {
-      var lat = parseFloat(g.lat), lon = parseFloat(g.long);
-      if (!isFinite(lat) || !isFinite(lon) || !AREA_COLORS[g.area]) return;
       var s = sum[g.area] = sum[g.area] || { lat: 0, lon: 0, n: 0 };
-      s.lat += lat; s.lon += lon; s.n++;
+      s.lat += parseFloat(g.lat); s.lon += parseFloat(g.long); s.n++;
     });
     Object.keys(sum).forEach(function (area) {
       var s = sum[area];
@@ -1077,53 +1491,81 @@ textarea { min-height: 70px; resize: vertical; }
   setAreasShown(areasShown);
   $("btnAreas").addEventListener("click", function () { setAreasShown(!areasShown); });
 
-  // ---------- hunts ----------
-  var hunts = store.get("hunts:" + code, {});
+  // ---------- meldingen (hunts, spots, hints) ----------
+  var items = store.get("items:" + code, null);
+  if (!items) {
+    items = {};
+    var oldHunts = store.get("hunts:" + code, {});
+    Object.keys(oldHunts).forEach(function (k) { var h = oldHunts[k]; h.kind = "hunt"; items[k] = h; });
+  }
   var deleted = store.get("deleted:" + code, {});
+  var mine = store.get("mine:" + code, {}); // eigen huntcodes: id -> {huntcode, qr}
   var lastId = store.get("lastId:" + code, null);
   var filterArea = store.get("filter", "all");
 
-  function saveHunts() {
-    store.set("hunts:" + code, hunts);
+  function saveItems() {
+    store.set("items:" + code, items);
     store.set("deleted:" + code, deleted);
     store.set("lastId:" + code, lastId);
   }
+  var renderTimer = null;
+  function scheduleRender() {
+    if (renderTimer) return;
+    renderTimer = setTimeout(function () { renderTimer = null; saveItems(); renderHunts(); }, 80);
+  }
 
-  function handleMessage(m) {
-    if (!m || m.event !== "message") return false;
-    lastId = m.id;
-    var d;
-    try { d = JSON.parse(m.message); } catch (e) { return false; }
-    if (!d || typeof d !== "object") return false;
-    if (d.type === "hunt" && typeof d.id === "string" && AREA_COLORS[d.area] && isFinite(d.lat) && isFinite(d.lon)) {
-      hunts[d.id] = {
-        id: d.id, area: d.area, lat: +d.lat, lon: +d.lon,
-        acc: isFinite(d.acc) ? Math.round(d.acc) : null,
-        t: isFinite(d.t) ? +d.t : m.time * 1000,
+  // Verwerkt een melding uit ntfy of MQTT. Geeft true als er direct iets veranderde.
+  function ingest(d) {
+    if (!d || typeof d !== "object" || typeof d.id !== "string" || !ID_RE.test(d.id)) return false;
+    if (d.type === "hunt") {
+      if (!AREA_COLORS[d.area] || !isFinite(d.lat) || !isFinite(d.lon)) return false;
+      var isNew = !items[d.id];
+      items[d.id] = {
+        id: d.id, kind: d.kind === "spot" ? "spot" : "hunt", area: d.area,
+        lat: +d.lat, lon: +d.lon,
+        acc: isFinite(d.acc) && d.acc ? Math.round(d.acc) : null,
+        t: isFinite(d.t) ? +d.t : Date.now(),
         by: String(d.by || "").slice(0, 40),
-        huntcode: String(d.huntcode || "").slice(0, 40),
-        note: String(d.note || "").slice(0, 200)
+        note: String(d.note || "").slice(0, 200),
+        sec: typeof d.sec === "string" ? d.sec.slice(0, 3000) : null,
+        photo: !!d.photo,
+        huntcode: d.v === 1 ? String(d.huntcode || "").slice(0, 40) : "" // oude testmeldingen
       };
-      return true;
+      return isNew;
     }
-    if (d.type === "delete" && typeof d.id === "string") {
-      deleted[d.id] = true;
-      return true;
+    if (d.type === "hint") {
+      if (items[d.id] || !AREA_COLORS[d.area] || !isFinite(d.lat) || !isFinite(d.lon) || !isFinite(d.t)) return false;
+      verifyEvent(d).then(function (ok) {
+        if (!ok || items[d.id]) return;
+        items[d.id] = { id: d.id, kind: "hint", area: d.area, lat: +d.lat, lon: +d.lon, acc: null, t: +d.t,
+          by: String(d.by || "").slice(0, 40), note: String(d.note || "").slice(0, 200), sec: null, photo: false, huntcode: "" };
+        scheduleRender();
+      });
+      return false;
+    }
+    if (d.type === "delete") {
+      if (deleted[d.id] || !isFinite(d.t)) return false;
+      verifyEvent(d).then(function (ok) { if (ok && !deleted[d.id]) { deleted[d.id] = true; scheduleRender(); } });
+      return false;
     }
     return false;
   }
 
-  function visibleHunts() {
-    return Object.keys(hunts)
-      .map(function (k) { return hunts[k]; })
-      .filter(function (h) { return !deleted[h.id] && (filterArea === "all" || h.area === filterArea); })
+  function visibleItems() {
+    return Object.keys(items)
+      .map(function (k) { return items[k]; })
+      .filter(function (h) { return !deleted[h.id] && areaOn(h.area) && (filterArea === "all" || h.area === filterArea); })
       .sort(function (a, b) { return b.t - a.t; });
+  }
+  function shownCount() {
+    return Object.keys(items).filter(function (k) { return !deleted[k] && areaOn(items[k].area); }).length;
   }
 
   function renderFilter() {
     var f = $("filter");
     f.textContent = "";
-    var all = Object.keys(hunts).filter(function (k) { return !deleted[k]; }).map(function (k) { return hunts[k]; });
+    if (filterArea !== "all" && !areaOn(filterArea)) filterArea = "all";
+    var all = Object.keys(items).filter(function (k) { return !deleted[k] && areaOn(items[k].area); }).map(function (k) { return items[k]; });
     function add(key, label, color) {
       var b = el("button");
       b.type = "button";
@@ -1135,88 +1577,216 @@ textarea { min-height: 70px; resize: vertical; }
       f.appendChild(b);
     }
     add("all", "Alle", null);
-    AREAS.forEach(function (a) { add(a, a, AREA_COLORS[a]); });
+    activeAreas().forEach(function (a) { add(a, a, AREA_COLORS[a]); });
   }
 
-  var confirmId = null;
+  function makeBadge(h) {
+    var b = el("span", "badge" + (h.kind === "spot" ? " spot" : h.kind === "hint" ? " hint" : ""));
+    b.style.setProperty("--c", AREA_COLORS[h.area]);
+    if (h.kind === "hint") b.appendChild(el("span", null, h.area.charAt(0)));
+    else b.textContent = h.area.charAt(0);
+    return b;
+  }
+  function markerIcon(h, fresh) {
+    var c = AREA_COLORS[h.area], letter = h.area.charAt(0);
+    if (h.kind === "hint") return L.divIcon({ className: "", html: '<div class="hm hint" style="--c:' + c + '"><span>' + letter + "</span></div>", iconSize: [26, 26], iconAnchor: [13, 13] });
+    if (h.kind === "spot") return L.divIcon({ className: "", html: '<div class="hm spot" style="--c:' + c + '">' + letter + "</div>", iconSize: [30, 30], iconAnchor: [15, 15] });
+    return L.divIcon({ className: "", html: '<div class="hm' + (fresh ? " fresh" : "") + '" style="--c:' + c + '">' + letter + "</div>", iconSize: fresh ? [36, 36] : [30, 30], iconAnchor: fresh ? [18, 18] : [15, 15] });
+  }
+
   var markers = {};
   function renderHunts() {
     renderFilter();
     updateCountdowns();
-    var list = visibleHunts();
+    var list = visibleItems();
     var ul = $("huntList");
     ul.textContent = "";
     $("huntEmpty").hidden = list.length > 0;
-    $("huntCount").textContent = Object.keys(hunts).filter(function (k) { return !deleted[k]; }).length;
+    $("huntCount").textContent = shownCount();
 
     huntLayer.clearLayers();
     markers = {};
     renderRoutes(list);
     list.slice().reverse().forEach(function (h) {
       var age = Date.now() - h.t;
-      var fresh = age < 3600000;
-      var col = AREA_COLORS[h.area];
-      var icon = L.divIcon({
-        className: "",
-        html: '<div class="hm' + (fresh ? " fresh" : "") + '" style="background:' + col + '">' + h.area.charAt(0) + "</div>",
-        iconSize: fresh ? [36, 36] : [30, 30],
-        iconAnchor: fresh ? [18, 18] : [15, 15]
-      });
-      var mk = L.marker([h.lat, h.lon], { icon: icon, opacity: age < 3 * 3600000 ? 1 : .55, zIndexOffset: fresh ? 1000 : 0 });
-      var p = el("div");
-      p.appendChild(el("b", null, "Hunt " + h.area));
-      p.appendChild(el("div", null, dayLabel(h.t) + hhmm(h.t) + " · " + ago(h.t)));
-      if (h.huntcode) { var pc = el("div"); pc.appendChild(el("span", "hcode", h.huntcode)); p.appendChild(pc); }
-      if (h.by) p.appendChild(el("div", null, h.by));
-      if (h.note) p.appendChild(el("div", "muted", h.note));
-      p.appendChild(navLink(h.lat, h.lon));
-      mk.bindPopup(p);
-      mk.bindTooltip(dayLabel(h.t) + hhmm(h.t), { permanent: true, direction: "right", offset: [fresh ? 16 : 13, 0], className: "htime" });
+      var fresh = h.kind === "hunt" && age < 3600000;
+      var mk = L.marker([h.lat, h.lon], { icon: markerIcon(h, fresh), opacity: age < 3 * 3600000 ? 1 : .55, zIndexOffset: fresh ? 1000 : h.kind === "hint" ? 200 : 0 });
+      mk.bindTooltip(KIND_LABEL[h.kind] + " " + dayLabel(h.t) + hhmm(h.t), { permanent: true, direction: "right", offset: [fresh ? 16 : 13, 0], className: "htime" });
+      mk.on("click", function () { openDetail(h.id); });
       mk.addTo(huntLayer);
       markers[h.id] = mk;
     });
 
     list.forEach(function (h) {
-      var li = el("li", "hunt");
-      var bd = el("div", "badge", h.area.charAt(0));
-      bd.style.background = AREA_COLORS[h.area];
-      li.appendChild(bd);
+      var li = el("li", "hunt clickable");
+      li.addEventListener("click", function () { openDetail(h.id); });
+      li.appendChild(makeBadge(h));
       var body = el("div", "body");
       var head = el("div", "head");
+      head.appendChild(el("span", "kind " + h.kind, KIND_LABEL[h.kind]));
       head.appendChild(el("b", null, h.area));
       head.appendChild(el("span", "time", dayLabel(h.t) + hhmm(h.t) + " · " + ago(h.t)));
-      if (h.huntcode) head.appendChild(el("span", "hcode", h.huntcode));
       body.appendChild(head);
-      if (h.by) body.appendChild(el("div", "small", h.by));
+      var sub = [h.by, rdText(h.lat, h.lon)].filter(Boolean).join(" · ");
+      body.appendChild(el("div", "small", sub));
       if (h.note) body.appendChild(el("div", "note small muted", h.note));
       li.appendChild(body);
       var acts = el("div", "acts");
-      var show = el("button", "linkbtn", "Toon");
-      show.type = "button";
-      show.addEventListener("click", function () {
-        map.setView([h.lat, h.lon], Math.max(map.getZoom(), 14));
-        if (markers[h.id]) markers[h.id].openPopup();
-        if (window.innerWidth < 900) $("map").scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-      acts.appendChild(show);
+      var det = el("button", "linkbtn", "Details");
+      det.type = "button";
+      acts.appendChild(det);
       var route = el("a", "linkbtn", "Route");
       route.href = navUrl(h.lat, h.lon); route.target = "_blank"; route.rel = "noopener";
+      route.addEventListener("click", function (e) { e.stopPropagation(); });
       acts.appendChild(route);
-      var del = el("button", "linkbtn danger", confirmId === h.id ? "Zeker wissen?" : "Wissen");
-      del.type = "button";
-      del.addEventListener("click", function () {
-        if (confirmId !== h.id) { confirmId = h.id; renderHunts(); return; }
-        confirmId = null;
-        deleted[h.id] = true; saveHunts(); renderHunts();
-        publish({ topic: topicData, message: JSON.stringify({ v: 1, type: "delete", id: h.id }) }).catch(function () {});
-      });
-      acts.appendChild(del);
       li.appendChild(acts);
       ul.appendChild(li);
     });
   }
 
-  // ---------- ntfy: hunts ophalen en live volgen ----------
+  // ---------- detailvenster ----------
+  var detailId = null, confirmDelete = false;
+  function closeDetail() { $("detailDlg").hidden = true; detailId = null; confirmDelete = false; }
+  $("detailClose").addEventListener("click", closeDetail);
+  $("detailDlg").addEventListener("click", function (e) { if (e.target === this) closeDetail(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("detailDlg").hidden) closeDetail(); });
+
+  function kvRow(dl, label, value) {
+    dl.appendChild(el("dt", null, label));
+    var dd = el("dd");
+    if (value instanceof Node) dd.appendChild(value); else if (value != null) dd.appendChild(el("span", null, value));
+    dl.appendChild(dd);
+    return dd;
+  }
+  function jotihuntLink(qr) {
+    try {
+      var u = new URL(qr);
+      if (u.protocol === "https:" && /(^|\.)jotihunt\.(nl|net)$/i.test(u.hostname)) return u.href;
+    } catch (e) {}
+    return null;
+  }
+  async function huntSecret(h) {
+    if (mine[h.id]) return mine[h.id];
+    if (h.huntcode) return { huntcode: h.huntcode, qr: "" };
+    if (isAdmin && h.sec) { try { return await openText(h.sec); } catch (e) { return { error: true }; } }
+    return null;
+  }
+  async function huntPhoto(h) {
+    if (!h.photo) return null;
+    var local = await idb.get("photo:" + h.id);
+    if (local) return local;
+    if (!isAdmin) return null;
+    var payload = await fetchPhotoPayload(h.id);
+    if (!payload) return "missing";
+    try {
+      var blob = new Blob([await unseal(payload)], { type: "image/jpeg" });
+      idb.set("photo:" + h.id, blob);
+      return blob;
+    } catch (e) { return "missing"; }
+  }
+
+  async function openDetail(id) {
+    var h = items[id];
+    if (!h) return;
+    detailId = id;
+    confirmDelete = false;
+    var badge = makeBadge(h);
+    $("detailBadge").replaceWith(badge);
+    badge.id = "detailBadge";
+    $("detailTitle").textContent = KIND_LABEL[h.kind] + " " + h.area;
+    var body = $("detailBody");
+    body.textContent = "";
+    body.classList.toggle("has-photo", !!h.photo);
+
+    var photoBox = null;
+    if (h.photo) {
+      photoBox = el("div", "photo-box", "Foto laden…");
+      body.appendChild(photoBox);
+    }
+    var info = el("div");
+    var dl = el("dl", "kv");
+    info.appendChild(dl);
+    body.appendChild(info);
+
+    kvRow(dl, "Tijd", dayLabel(h.t) + hhmm(h.t) + " (" + ago(h.t) + ")");
+    if (h.by) kvRow(dl, h.kind === "hint" ? "Geplaatst door" : "Gemeld door", h.by);
+    if (h.note) kvRow(dl, "Notitie", h.note);
+    var codeDd = null;
+    if (h.kind === "hunt") codeDd = kvRow(dl, "Huntcode", el("span", "muted", "…"));
+    var rd = toRD(h.lat, h.lon);
+    var ddx = kvRow(dl, "RD X", el("span", "val", String(rd.x)));
+    ddx.appendChild(copyBtn(String(rd.x)));
+    var ddy = kvRow(dl, "RD Y", el("span", "val", String(rd.y)));
+    ddy.appendChild(copyBtn(String(rd.y)));
+    var ddxy = kvRow(dl, "RD X,Y", el("span", null, rd.x + ", " + rd.y));
+    ddxy.appendChild(copyBtn(rd.x + ", " + rd.y, "Kopieer beide"));
+    var ddll = kvRow(dl, "Lat, lon", el("span", null, fmtCoord(h.lat, h.lon)));
+    ddll.appendChild(copyBtn(h.lat.toFixed(6) + ", " + h.lon.toFixed(6)));
+    if (h.acc) kvRow(dl, "Nauwkeurigheid", "±" + h.acc + " m");
+    if (h.kind === "hunt") {
+      var next = h.t + HUNT_INTERVAL;
+      kvRow(dl, "Weer huntbaar", hhmm(next) + (next > Date.now() ? " (nog " + mmss(next - Date.now()) + ")" : " (nu al)"));
+    }
+
+    var acts = $("detailActs");
+    acts.textContent = "";
+    var nav = el("a", "btn", "Navigeer");
+    nav.href = navUrl(h.lat, h.lon); nav.target = "_blank"; nav.rel = "noopener";
+    acts.appendChild(nav);
+    var show = el("button", "btn ghost", "Toon op kaart");
+    show.type = "button";
+    show.addEventListener("click", function () {
+      closeDetail();
+      map.setView([h.lat, h.lon], Math.max(map.getZoom(), 15));
+      if (window.innerWidth < 900) $("map").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    acts.appendChild(show);
+    var gm = el("a", "btn ghost", "Google Maps");
+    gm.href = mapsUrl(h.lat, h.lon); gm.target = "_blank"; gm.rel = "noopener";
+    acts.appendChild(gm);
+    if (isAdmin) {
+      var del = el("button", "btn danger", "Wissen");
+      del.type = "button";
+      del.addEventListener("click", function () {
+        if (!confirmDelete) { confirmDelete = true; del.textContent = "Zeker wissen? Tik nogmaals"; return; }
+        adminDelete(h.id).then(closeDetail, function (err) { del.textContent = "Wissen mislukt: " + err.message; });
+      });
+      acts.appendChild(del);
+    }
+    $("detailDlg").hidden = false;
+
+    if (codeDd) {
+      var s = await huntSecret(h);
+      if (detailId !== id) return;
+      codeDd.textContent = "";
+      if (s && s.error) codeDd.appendChild(el("span", "muted", "Kon de code niet ontsleutelen."));
+      else if (s && (s.huntcode || s.qr)) {
+        if (s.huntcode) { codeDd.appendChild(el("span", "val", s.huntcode)); codeDd.appendChild(copyBtn(s.huntcode)); }
+        var reg = s.qr && jotihuntLink(s.qr);
+        if (reg) {
+          var a = el("a", "linkbtn", "Registreer op jotihunt.nl");
+          a.href = reg; a.target = "_blank"; a.rel = "noopener";
+          codeDd.appendChild(a);
+        } else if (s.qr && s.qr !== s.huntcode) codeDd.appendChild(el("span", "small muted", "QR: " + s.qr));
+      } else if (h.sec && !isAdmin) codeDd.appendChild(el("span", "muted", "Alleen zichtbaar voor de melder en de admins."));
+      else codeDd.appendChild(el("span", "muted", "Geen code ingevuld."));
+    }
+    if (photoBox) {
+      var ph = await huntPhoto(h);
+      if (detailId !== id) return;
+      photoBox.textContent = "";
+      if (ph instanceof Blob) {
+        var url = URL.createObjectURL(ph);
+        var link = el("a"); link.href = url; link.target = "_blank"; link.rel = "noopener";
+        var img = el("img"); img.src = url; img.alt = "Foto bij " + KIND_LABEL[h.kind].toLowerCase() + " " + h.area;
+        link.appendChild(img);
+        photoBox.appendChild(link);
+      } else if (ph === "missing") photoBox.textContent = "Foto niet gevonden (nog niet aangekomen of verlopen).";
+      else photoBox.textContent = "Foto alleen zichtbaar voor de melder en de admins.";
+    }
+  }
+
+  // ---------- ntfy: meldingen ophalen en live volgen (en pushmeldingen) ----------
   function setConn(ok, text) {
     $("conn").dataset.ok = ok ? "1" : "0";
     $("connText").textContent = text;
@@ -1224,6 +1794,13 @@ textarea { min-height: 70px; resize: vertical; }
   function publish(obj) {
     return fetch(NTFY + "/", { method: "POST", body: JSON.stringify(obj) })
       .then(function (r) { if (!r.ok) throw new Error("ntfy " + r.status); return r.json(); });
+  }
+  function handleNtfy(m) {
+    if (!m || m.event !== "message") return false;
+    lastId = m.id;
+    var d;
+    try { d = JSON.parse(m.message); } catch (e) { return false; }
+    return ingest(d);
   }
   // Haalt berichten op (alles, of alleen nieuwe sinds lastId). Breekt af na 15 s.
   function poll(all) {
@@ -1237,13 +1814,12 @@ textarea { min-height: 70px; resize: vertical; }
         var changed = false;
         txt.split("\n").forEach(function (line) {
           if (!line.trim()) return;
-          try { if (handleMessage(JSON.parse(line))) changed = true; } catch (e) {}
+          try { if (handleNtfy(JSON.parse(line))) changed = true; } catch (e) {}
         });
-        saveHunts();
+        saveItems();
         if (changed || all) renderHunts();
       }, function (err) { clearTimeout(timer); throw err; });
   }
-
   // Live-verbinding (SSE). Lukt die niet (bijv. bedrijfsnetwerk), dan valt de pagina terug op elke 20 s ophalen.
   var es = null, liveOpen = false;
   function openLive() {
@@ -1254,7 +1830,7 @@ textarea { min-height: 70px; resize: vertical; }
     es.onerror = function () { liveOpen = false; };
     es.onmessage = function (e) {
       var m; try { m = JSON.parse(e.data); } catch (x) { return; }
-      if (handleMessage(m)) { saveHunts(); renderHunts(); }
+      if (handleNtfy(m)) scheduleRender();
     };
   }
   function pollTick() {
@@ -1264,25 +1840,92 @@ textarea { min-height: 70px; resize: vertical; }
       .catch(function () { setConn(false, "Geen verbinding met ntfy.sh"); });
   }
 
-  renderHunts();
-  poll(true)
-    .then(function () { if (!liveOpen) setConn(true, "Verbonden"); })
-    .catch(function () { setConn(false, "Geen verbinding met ntfy.sh"); })
-    .then(openLive);
-  setInterval(pollTick, 20000);
-  setInterval(renderHunts, 60000); // "x min geleden" bijwerken
-  document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible") { loadStatus(); poll(false).catch(function () {}); }
-  });
+  // ---------- MQTT: blijvende opslag (meldingen, hints, gebieden, foto's) en live locaties ----------
+  var clients = [];
+  var photoWaiters = {};
+  function mqPublish(sub, payload) {
+    // QoS 0 met retain; mqtt.js houdt berichten vast tot de verbinding er (weer) is
+    clients.forEach(function (c) { c.publish(mqBase + sub, payload, { qos: 0, retain: true }); });
+  }
+  function onMqMessage(topic, payload) {
+    if (topic.indexOf(mqBase) !== 0) return;
+    var sub = topic.slice(mqBase.length);
+    if (sub.indexOf("photo/") === 0) { if (photoWaiters[sub]) photoWaiters[sub](payload); return; }
+    if (sub.indexOf("loc/") === 0) { onTeamMessage(sub.slice(4), payload); return; }
+    var s = payload.toString();
+    if (!s) return;
+    var d;
+    try { d = JSON.parse(s); } catch (e) { return; }
+    if (sub === "config") { applyAreaCfg(d); return; }
+    if (sub.indexOf("ev/") === 0 || sub.indexOf("del/") === 0) { if (ingest(d)) scheduleRender(); }
+  }
+  function connectMq() {
+    if (!window.mqtt) { $("btnTeam").hidden = true; $("btnShare").hidden = true; return; }
+    BROKERS.forEach(function (b) {
+      var c = mqtt.connect(b.url, {
+        clientId: "vk-" + deviceId + "-" + Math.random().toString(16).slice(2, 6),
+        connectTimeout: 10000, reconnectPeriod: 5000, keepalive: 30, clean: true
+      });
+      c.vkMaxPhoto = b.maxPhoto;
+      c.on("connect", function () {
+        c.subscribe([mqBase + "loc/+", mqBase + "ev/+", mqBase + "del/+", mqBase + "config"], { qos: 0 });
+        if (sharing && lastSent) publishLoc(c, lastSent);
+      });
+      c.on("message", onMqMessage);
+      c.on("error", function () {});
+      clients.push(c);
+    });
+  }
+  // Foto ophalen: abonneren op het fototopic, alle servers 5 s laten antwoorden en de grootste versie nemen
+  function fetchPhotoPayload(id) {
+    return new Promise(function (resolve) {
+      var sub = "photo/" + id, best = null, timer = null;
+      function finish() {
+        delete photoWaiters[sub];
+        clients.forEach(function (c) { try { c.unsubscribe(mqBase + sub); } catch (e) {} });
+        resolve(best);
+      }
+      photoWaiters[sub] = function (payload) {
+        if (payload && payload.length && (!best || payload.length > best.length)) best = new Uint8Array(payload);
+        clearTimeout(timer);
+        timer = setTimeout(finish, best && best.length > 60000 ? 300 : 2500);
+      };
+      clients.forEach(function (c) { c.subscribe(mqBase + sub, { qos: 0 }); });
+      timer = setTimeout(finish, 6000);
+    });
+  }
+
+  // ---------- gebieden aan/uit toepassen ----------
+  function applyAreaCfg(d) {
+    if (!d || d.type !== "areas" || !Array.isArray(d.disabled) || !isFinite(d.t) || d.t <= areaCfg.t) return;
+    verifyEvent(d).then(function (ok) {
+      if (!ok || d.t <= areaCfg.t) return;
+      areaCfg = { disabled: d.disabled.filter(function (a) { return AREA_COLORS[a]; }), t: d.t };
+      store.set("areas:" + code, areaCfg);
+      rerenderAreas();
+    });
+  }
+  function rerenderAreas() {
+    if (selArea && !areaOn(selArea)) selArea = null;
+    renderStatus();
+    renderGroups();
+    renderAreaPick();
+    renderHintAreas();
+    renderSubs();
+    renderAreaToggles();
+    renderHunts();
+  }
 
   // ---------- tabbladen ----------
-  var TABS = ["hunts", "report", "team", "notify"];
+  var TABS = ["hunts", "report", "team", "notify", "admin"];
   function showTab(name) {
+    if (name === "admin" && !isAdmin) name = "hunts";
     TABS.forEach(function (t) {
       $("tab-" + t).setAttribute("aria-selected", t === name ? "true" : "false");
       $("pane-" + t).hidden = t !== name;
     });
-    if (name !== "report") stopPicking();
+    if (name !== "report" && pickTarget === "report") stopPicking();
+    if (name !== "admin" && pickTarget === "hint") stopPicking();
     if (name === "report" && locMode === "gps" && !pos) getGps();
   }
   TABS.forEach(function (t) { $("tab-" + t).addEventListener("click", function () { showTab(t); }); });
@@ -1314,10 +1957,6 @@ textarea { min-height: 70px; resize: vertical; }
   });
 
   // ---------- live locaties van het team (alleen op de kaart, geen meldingen) ----------
-  // Via twee gratis MQTT-servers tegelijk, zodat het blijft werken als er één uitvalt.
-  // Elk apparaat zet zijn laatste positie als "retained" bericht klaar; wie de kaart opent ziet meteen iedereen.
-  var BROKERS = ["wss://broker.hivemq.com:8884/mqtt", "wss://broker.emqx.io:8084/mqtt"];
-  var teamBase = "vossenkaart/" + code + "/loc/";
   var TEAM_STALE = 5 * 60000, TEAM_HIDE = 60 * 60000;
   var deviceId = store.get("deviceId", null);
   if (!deviceId || !/^[a-z0-9]{8,32}$/.test(deviceId)) {
@@ -1326,7 +1965,6 @@ textarea { min-height: 70px; resize: vertical; }
   }
   var teamLayer = L.layerGroup();
   var team = {};
-  var clients = [];
   var sharing = false, shareWatch = null, lastPos = null, lastSent = null, wakeLock = null;
 
   function initials(n) {
@@ -1392,7 +2030,6 @@ textarea { min-height: 70px; resize: vertical; }
       var m = team[id];
       var li = el("li", "hunt");
       var bd = el("div", "badge", initials(m.n));
-      bd.style.background = "#1f2a37";
       bd.style.fontSize = ".95rem";
       if (Date.now() - m.t > TEAM_STALE) bd.style.opacity = ".5";
       li.appendChild(bd);
@@ -1425,8 +2062,7 @@ textarea { min-height: 70px; resize: vertical; }
     delete team[id];
     updateTeamCount();
   }
-  function onTeamMessage(topic, payload) {
-    var id = topic.slice(teamBase.length);
+  function onTeamMessage(id, payload) {
     if (!/^[a-z0-9]{8,32}$/.test(id) || id === deviceId) return;
     var s = payload.toString();
     if (!s) { removeMember(id); return; }
@@ -1442,33 +2078,18 @@ textarea { min-height: 70px; resize: vertical; }
     renderMember(id);
     updateTeamCount();
   }
-  function connectTeam() {
-    if (!window.mqtt) { $("btnTeam").hidden = true; $("btnShare").hidden = true; return; }
-    BROKERS.forEach(function (url) {
-      var c = mqtt.connect(url, {
-        clientId: "vk-" + deviceId + "-" + Math.random().toString(16).slice(2, 6),
-        connectTimeout: 10000, reconnectPeriod: 5000, keepalive: 30, clean: true
-      });
-      c.on("connect", function () {
-        c.subscribe(teamBase + "+", { qos: 0 });
-        if (sharing && lastSent) publishTo(c, lastSent);
-      });
-      c.on("message", onTeamMessage);
-      c.on("error", function () {});
-      clients.push(c);
-    });
+  function publishLoc(c, payload) {
+    if (c.connected) c.publish(mqBase + "loc/" + deviceId, payload, { qos: 0, retain: true });
   }
-  function publishTo(c, payload) {
-    if (c.connected) c.publish(teamBase + deviceId, payload, { qos: 0, retain: true });
-  }
+
   // ---------- eigen naam (per telefoon) ----------
   function getName() { return String(store.get("name", "") || "").trim().slice(0, 30); }
-  function myName() { return getName(); }
   var afterName = null;
   function renderName() {
     var n = getName();
-    $("btnName").textContent = n || "Naam instellen";
+    $("btnName").textContent = (n || "Naam instellen") + (isAdmin ? " · admin" : "");
     if (n && !$("huntBy").value.trim()) $("huntBy").value = n;
+    $("roleText").textContent = "Je bent ingelogd als " + (isAdmin ? "admin" : "user") + ".";
   }
   function openNameDlg(then) {
     afterName = then || null;
@@ -1497,14 +2118,15 @@ textarea { min-height: 70px; resize: vertical; }
   $("btnName2").addEventListener("click", function () { openNameDlg(); });
   if (!getName() && store.get("by", "")) store.set("name", String(store.get("by", "")).slice(0, 30));
 
+  // ---------- locatie delen ----------
   var sentMeta = null; // {t, lat, lon} van het laatst verstuurde bericht
   function sendPos(p) {
     lastPos = p;
     var now = Date.now();
-    var payload = JSON.stringify({ n: myName() || "Onbekend", lat: +p.lat.toFixed(6), lon: +p.lon.toFixed(6), acc: p.acc ? Math.round(p.acc) : null, t: now });
+    var payload = JSON.stringify({ n: getName() || "Onbekend", lat: +p.lat.toFixed(6), lon: +p.lon.toFixed(6), acc: p.acc ? Math.round(p.acc) : null, t: now });
     lastSent = payload;
     sentMeta = { t: now, lat: p.lat, lon: p.lon };
-    clients.forEach(function (c) { publishTo(c, payload); });
+    clients.forEach(function (c) { publishLoc(c, payload); });
   }
   // versturen bij >= 30 m verplaatsing of na 45 s
   function shouldSend(p) {
@@ -1522,7 +2144,7 @@ textarea { min-height: 70px; resize: vertical; }
     navigator.wakeLock.request("screen").then(function (l) { wakeLock = l; }, function () {});
   }
   function setSharing(on) {
-    if (on && !myName()) {
+    if (on && !getName()) {
       openNameDlg(function () { setSharing(true); });
       return;
     }
@@ -1539,15 +2161,12 @@ textarea { min-height: 70px; resize: vertical; }
         setTimeout(function () { $("btnShare").textContent = "Deel mijn locatie"; }, 3000);
       }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 30000 });
       requestWake();
-      var hint = $("maphint");
-      hint.textContent = "Je locatie is zichtbaar voor je groep zolang deze pagina open is.";
-      hint.hidden = false;
-      setTimeout(function () { hint.hidden = true; hint.textContent = "Tik op de kaart waar de hunt was"; }, 4000);
+      showMapHint("Je locatie is zichtbaar voor je groep zolang deze pagina open is.", 4000);
     } else {
       if (shareWatch != null) navigator.geolocation.clearWatch(shareWatch);
       shareWatch = null;
       sentMeta = null; lastSent = null;
-      clients.forEach(function (c) { if (c.connected) c.publish(teamBase + deviceId, "", { qos: 0, retain: true }); });
+      clients.forEach(function (c) { if (c.connected) c.publish(mqBase + "loc/" + deviceId, "", { qos: 0, retain: true }); });
       if (wakeLock) { wakeLock.release().catch(function () {}); wakeLock = null; }
     }
   }
@@ -1561,6 +2180,8 @@ textarea { min-height: 70px; resize: vertical; }
     if (document.visibilityState === "visible") {
       requestWake();
       if (sharing && lastPos) sendPos(lastPos);
+      loadStatus();
+      poll(false).catch(function () {});
     }
   });
 
@@ -1573,18 +2194,59 @@ textarea { min-height: 70px; resize: vertical; }
   }
   setTeamShown(teamShown);
   $("btnTeam").addEventListener("click", function () { setTeamShown(!teamShown); });
-  connectTeam();
-  if (store.get("sharing", false)) setTimeout(function () { setSharing(true); }, 500);
 
-  // ---------- hunt melden ----------
+  // ---------- kaart: plek kiezen (voor een melding of een hint) ----------
+  var pickTarget = null; // "report" | "hint"
+  var hintTimer = null;
+  function showMapHint(text, ms) {
+    var hint = $("maphint");
+    hint.textContent = text;
+    hint.hidden = false;
+    clearTimeout(hintTimer);
+    if (ms) hintTimer = setTimeout(function () { if (!pickTarget) hint.hidden = true; }, ms);
+  }
+  function startPicking(target) {
+    pickTarget = target;
+    showMapHint(target === "hint" ? "Tik op de kaart waar de hint naar wijst" : "Tik op de kaart waar het was");
+    map.getContainer().style.cursor = "crosshair";
+    if (window.innerWidth < 900) $("map").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function stopPicking() {
+    pickTarget = null;
+    $("maphint").hidden = true;
+    map.getContainer().style.cursor = "";
+  }
+  map.on("click", function (e) {
+    if (pickTarget === "report" && locMode === "map") placePick(e.latlng);
+    else if (pickTarget === "hint") placeHint(e.latlng.lat, e.latlng.lng, true);
+  });
+
+  // ---------- melden: hunt of spot ----------
   var selArea = store.get("lastArea", null);
+  if (selArea && !AREA_COLORS[selArea]) selArea = null;
+  var reportKind = "hunt";
   var pos = null; // {lat, lon, acc}
   var locMode = "gps";
+  var photoBlob = null, photoSmall = null, photoUrl = null, qrText = "";
+
+  function setKind(k) {
+    reportKind = k;
+    $("kindHunt").setAttribute("aria-pressed", k === "hunt" ? "true" : "false");
+    $("kindSpot").setAttribute("aria-pressed", k === "spot" ? "true" : "false");
+    $("codeField").hidden = k !== "hunt";
+    $("kindHelp").textContent = k === "hunt"
+      ? "Een hunt: jullie hebben de vos gevonden. Start het uur aftellen voor dit gebied."
+      : "Een spot: jullie hebben het vossenteam gezien, maar niet gehunt. Telt mee in de looproute, zonder aftellen.";
+    $("btnSubmit").textContent = k === "hunt" ? "Hunt opslaan" : "Spot opslaan";
+    updateCountdowns();
+  }
+  $("kindHunt").addEventListener("click", function () { setKind("hunt"); });
+  $("kindSpot").addEventListener("click", function () { setKind("spot"); });
 
   function renderAreaPick() {
     var w = $("areaPick");
     w.textContent = "";
-    AREAS.forEach(function (a) {
+    activeAreas().forEach(function (a) {
       var lab = el("label");
       var inp = el("input");
       inp.type = "radio"; inp.name = "area"; inp.value = a; inp.id = "area-" + a.toLowerCase();
@@ -1597,22 +2259,12 @@ textarea { min-height: 70px; resize: vertical; }
       w.appendChild(lab);
     });
   }
-  renderAreaPick();
-  updateCountdowns();
-  setInterval(updateCountdowns, 1000);
-
-  function setNowTime() { var d = new Date(); $("huntTime").value = pad(d.getHours()) + ":" + pad(d.getMinutes()); }
-  setNowTime();
-  $("huntBy").value = store.get("by", "") || getName();
-  renderName();
-  if (!getName()) setTimeout(function () { if ($("nameDlg").hidden) openNameDlg(); }, 700);
-  $("huntBy").addEventListener("input", function () { store.set("by", this.value); });
 
   function setLocText() {
     var t = $("locText");
     if (pos) {
       t.dataset.ok = "1";
-      t.textContent = fmtCoord(pos.lat, pos.lon) + (pos.acc ? "  (±" + Math.round(pos.acc) + " m)" : "  (gekozen op kaart)");
+      t.textContent = rdText(pos.lat, pos.lon) + "  ·  " + fmtCoord(pos.lat, pos.lon) + (pos.acc ? "  (±" + Math.round(pos.acc) + " m)" : "  (gekozen op kaart)");
     } else {
       t.dataset.ok = "0";
       t.textContent = locMode === "gps" ? "GPS-locatie ophalen…" : "Tik op de kaart om de plek te kiezen";
@@ -1631,22 +2283,13 @@ textarea { min-height: 70px; resize: vertical; }
       $("locText").textContent = "Geen GPS-toestemming. Sta locatie toe of kies de plek op de kaart.";
     }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 15000 });
   }
-  function startPicking() {
-    $("maphint").hidden = false;
-    map.getContainer().style.cursor = "crosshair";
-    if (window.innerWidth < 900) $("map").scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-  function stopPicking() {
-    $("maphint").hidden = true;
-    map.getContainer().style.cursor = "";
-  }
   function setLocMode(m) {
     locMode = m;
     $("locGps").setAttribute("aria-pressed", m === "gps" ? "true" : "false");
     $("locMap").setAttribute("aria-pressed", m === "map" ? "true" : "false");
     pos = null;
     if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
-    if (m === "gps") { stopPicking(); getGps(); } else { setLocText(); startPicking(); }
+    if (m === "gps") { stopPicking(); getGps(); } else { setLocText(); startPicking("report"); }
     validate();
   }
   $("locGps").addEventListener("click", function () { setLocMode("gps"); });
@@ -1662,12 +2305,9 @@ textarea { min-height: 70px; resize: vertical; }
     stopPicking();
     if (window.innerWidth < 900) $("pane-report").scrollIntoView({ behavior: "smooth", block: "start" });
   }
-  map.on("click", function (e) {
-    if (locMode === "map" && !$("pane-report").hidden) placePick(e.latlng);
-  });
 
   function validate() {
-    $("btnSubmit").disabled = !(selArea && pos && $("huntTime").value);
+    $("btnSubmit").disabled = !(selArea && areaOn(selArea) && pos && $("huntTime").value);
   }
   $("huntTime").addEventListener("input", validate);
 
@@ -1677,102 +2317,444 @@ textarea { min-height: 70px; resize: vertical; }
 
   $("btnReport").addEventListener("click", function () {
     showTab("report");
-    setNowTime(); alertMsg("");
+    $("huntTime").value = nowTime(); alertMsg("");
     if (window.innerWidth < 900) $("pane-report").scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
-  $("reportForm").addEventListener("submit", function (e) {
-    e.preventDefault();
-    if ($("btnSubmit").disabled) return;
-    var parts = $("huntTime").value.split(":");
-    var d = new Date(); d.setHours(+parts[0], +parts[1], 0, 0);
-    if (d.getTime() - Date.now() > 10 * 60000) d.setDate(d.getDate() - 1); // tijd na middernacht ingevuld voor gisteren
-    var h = {
-      v: 1, type: "hunt", id: uid(), area: selArea,
-      lat: +pos.lat.toFixed(6), lon: +pos.lon.toFixed(6),
-      acc: pos.acc ? Math.round(pos.acc) : null,
-      t: d.getTime(),
-      by: $("huntBy").value.trim().slice(0, 40),
-      huntcode: $("huntCode").value.trim().toUpperCase().slice(0, 40),
-      note: $("huntNote").value.trim().slice(0, 200)
-    };
-    $("btnSubmit").disabled = true;
-    alertMsg("Opslaan…");
-    publish({ topic: topicData, message: JSON.stringify(h), tags: ["hunt"] })
-      .then(function () {
-        hunts[h.id] = h; saveHunts();
-        filterArea = "all"; store.set("filter", "all");
-        renderHunts();
-        var title = "Hunt " + h.area + " om " + hhmm(h.t);
-        var next = h.t + HUNT_INTERVAL;
-        var text = (h.by || "Iemand") + " heeft " + h.area + " gehunt" + (h.note ? ": " + h.note : "") +
-          (h.huntcode ? "\nHuntcode: " + h.huntcode : "") +
-          "\nWeer huntbaar om " + hhmm(next) + ". Tik om de plek te openen.";
-        var note = { title: title, message: text, tags: ["fox_face"], priority: 4, click: mapsUrl(h.lat, h.lon) };
-        // Alleen naar het kanaal van het gebied: elk bericht telt mee voor de ntfy-daglimiet (250 per verbinding)
-        var sends = [publish(Object.assign({ topic: topicArea(h.area) }, note)).catch(function () {})];
-        // Geplande melding (ntfy stuurt hem zelf op het juiste moment): vos mag weer gehunt worden
-        var delaySec = Math.round((next - Date.now()) / 1000);
-        if (delaySec >= 30) {
-          var again = { title: h.area + " mag weer gehunt worden", message: "Het uur na de hunt van " + hhmm(h.t) + " is voorbij.", tags: ["alarm_clock"], priority: 4, delay: delaySec + "s" };
-          sends.push(publish(Object.assign({ topic: topicArea(h.area) }, again)).catch(function () {}));
-        }
-        return Promise.all(sends);
-      })
-      .then(function () {
-        alertMsg("Hunt opgeslagen en gemeld aan de groep.", "ok");
-        $("huntNote").value = "";
-        $("huntCode").value = "";
-        if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
-        pos = null; setLocText();
-        map.setView([h.lat, h.lon], Math.max(map.getZoom(), 13));
-        setTimeout(function () { showTab("hunts"); }, 1200);
-      })
-      .catch(function (err) {
-        alertMsg("Opslaan mislukt (" + err.message + "). Controleer je internet en probeer opnieuw.", "err");
-        validate();
-      });
+  // ----- foto -----
+  function loadImage(file) {
+    return new Promise(function (res, rej) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () { res(img); };
+      img.onerror = function () { URL.revokeObjectURL(url); rej(new Error("Foto kon niet worden gelezen")); };
+      img.src = url;
+    });
+  }
+  function canvasBlob(img, maxSide, q) {
+    var s = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+    var c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(img.naturalWidth * s));
+    c.height = Math.max(1, Math.round(img.naturalHeight * s));
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return new Promise(function (res) { c.toBlob(function (b) { res(b); }, "image/jpeg", q); });
+  }
+  async function shrink(img, limit, maxSide, q) {
+    var b = null;
+    for (var i = 0; i < 6; i++) {
+      b = await canvasBlob(img, maxSide, q);
+      if (b && b.size <= limit) return b;
+      maxSide = Math.round(maxSide * 0.8); q = Math.max(0.35, q - 0.07);
+    }
+    return b;
+  }
+  function setPhoto(blob, small) {
+    photoBlob = blob; photoSmall = small;
+    if (photoUrl) URL.revokeObjectURL(photoUrl);
+    photoUrl = blob ? URL.createObjectURL(blob) : null;
+    $("photoPreview").hidden = !blob;
+    $("photoPick").hidden = !!blob;
+    if (blob) $("photoImg").src = photoUrl;
+  }
+  $("photoInput").addEventListener("change", async function () {
+    var f = this.files && this.files[0];
+    this.value = "";
+    if (!f) return;
+    try {
+      alertMsg("Foto verkleinen…");
+      var img = await loadImage(f);
+      var big = await shrink(img, 180000, 1600, 0.72);
+      var small = await shrink(img, 50000, 900, 0.55);
+      setPhoto(big, small);
+      alertMsg("");
+    } catch (e) { alertMsg(e.message, "err"); }
+  });
+  $("photoRemove").addEventListener("click", function () { setPhoto(null, null); });
+
+  // ----- QR-code -----
+  var scanStream = null, scanTimer = null, scanCanvas = document.createElement("canvas");
+  var detector = null;
+  try { if ("BarcodeDetector" in window) detector = new BarcodeDetector({ formats: ["qr_code"] }); } catch (e) { detector = null; }
+  function extractCode(text) {
+    var t = String(text || "").trim();
+    try {
+      var u = new URL(t);
+      var keys = ["code", "c", "huntcode", "hunt", "id"];
+      for (var i = 0; i < keys.length; i++) { var v = u.searchParams.get(keys[i]); if (v) return v; }
+      var parts = u.pathname.split("/").filter(Boolean);
+      if (parts.length) return decodeURIComponent(parts[parts.length - 1]);
+    } catch (e) {}
+    return t;
+  }
+  function setQr(text) {
+    qrText = String(text || "").slice(0, 300);
+    var info = $("qrInfo");
+    info.textContent = "";
+    if (!qrText) { info.hidden = true; return; }
+    $("huntCode").value = extractCode(qrText).slice(0, 80);
+    info.hidden = false;
+    info.appendChild(el("span", "muted", "QR gelezen: " + qrText + " "));
+    var reg = jotihuntLink(qrText);
+    if (reg) {
+      var a = el("a", "linkbtn", "Registreer op jotihunt.nl");
+      a.href = reg; a.target = "_blank"; a.rel = "noopener";
+      info.appendChild(a);
+    }
+  }
+  $("huntCode").addEventListener("input", function () { if (qrText && this.value !== extractCode(qrText)) setQr(""); });
+  async function decodeFrame(source, w, h) {
+    if (detector) {
+      try { var r = await detector.detect(source); if (r && r.length) return r[0].rawValue; } catch (e) {}
+    }
+    if (window.jsQR && w && h) {
+      scanCanvas.width = w; scanCanvas.height = h;
+      var ctx = scanCanvas.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(source, 0, 0, w, h);
+      var res = jsQR(ctx.getImageData(0, 0, w, h).data, w, h);
+      if (res && res.data) return res.data;
+    }
+    return null;
+  }
+  function stopScan() {
+    clearTimeout(scanTimer);
+    if (scanStream) scanStream.getTracks().forEach(function (t) { t.stop(); });
+    scanStream = null;
+    $("scanVideo").srcObject = null;
+    $("scanDlg").hidden = true;
+  }
+  async function scanLoop() {
+    var v = $("scanVideo");
+    if (!scanStream) return;
+    if (v.readyState >= 2 && v.videoWidth) {
+      var scale = Math.min(1, 720 / Math.max(v.videoWidth, v.videoHeight));
+      var found = await decodeFrame(v, Math.round(v.videoWidth * scale), Math.round(v.videoHeight * scale));
+      if (found) { setQr(found); stopScan(); alertMsg("Huntcode uit de QR-code ingevuld.", "ok"); return; }
+    }
+    scanTimer = setTimeout(scanLoop, 200);
+  }
+  $("btnScan").addEventListener("click", async function () {
+    $("scanDlg").hidden = false;
+    $("scanMsg").dataset.kind = "";
+    $("scanMsg").textContent = "Richt de camera op de QR-code.";
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      $("scanMsg").textContent = "Live scannen werkt niet in deze browser. Maak een foto van de QR-code.";
+      return;
+    }
+    try {
+      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+      var v = $("scanVideo");
+      v.srcObject = scanStream;
+      await v.play();
+      scanLoop();
+    } catch (e) {
+      $("scanMsg").dataset.kind = "err";
+      $("scanMsg").textContent = "Geen toegang tot de camera. Sta de camera toe, of maak een foto van de QR-code.";
+    }
+  });
+  $("scanClose").addEventListener("click", stopScan);
+  $("scanFile").addEventListener("change", async function () {
+    var f = this.files && this.files[0];
+    this.value = "";
+    if (!f) return;
+    try {
+      var img = await loadImage(f);
+      var scale = Math.min(1, 1200 / Math.max(img.naturalWidth, img.naturalHeight));
+      var found = await decodeFrame(img, Math.round(img.naturalWidth * scale), Math.round(img.naturalHeight * scale));
+      if (found) { setQr(found); stopScan(); alertMsg("Huntcode uit de QR-code ingevuld.", "ok"); }
+      else { $("scanMsg").dataset.kind = "err"; $("scanMsg").textContent = "Geen QR-code gevonden op de foto. Probeer het dichterbij en scherper."; }
+    } catch (e) { $("scanMsg").dataset.kind = "err"; $("scanMsg").textContent = e.message; }
   });
 
-  // ---------- meldingen ----------
+  // ----- opslaan -----
+  $("reportForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    if ($("btnSubmit").disabled) return;
+    var kind = reportKind;
+    var id = uid();
+    var t = timeToday($("huntTime").value);
+    var rd = toRD(pos.lat, pos.lon);
+    var ev = {
+      v: 2, type: "hunt", kind: kind, id: id, area: selArea,
+      lat: +pos.lat.toFixed(6), lon: +pos.lon.toFixed(6),
+      acc: pos.acc ? Math.round(pos.acc) : null,
+      t: t, rx: rd.x, ry: rd.y,
+      by: $("huntBy").value.trim().slice(0, 40),
+      note: $("huntNote").value.trim().slice(0, 200),
+      photo: !!photoBlob
+    };
+    var huntcode = kind === "hunt" ? $("huntCode").value.trim().slice(0, 80) : "";
+    var secret = huntcode || (kind === "hunt" && qrText) ? { huntcode: huntcode, qr: qrText || "" } : null;
+    $("btnSubmit").disabled = true;
+    alertMsg("Opslaan…");
+    try {
+      if (secret) ev.sec = await sealText(secret);
+      if (photoBlob) {
+        var bigSealed = await seal(new Uint8Array(await photoBlob.arrayBuffer()));
+        var smallSealed = await seal(new Uint8Array(await photoSmall.arrayBuffer()));
+        clients.forEach(function (c) {
+          var p = bigSealed.length <= c.vkMaxPhoto ? bigSealed : smallSealed;
+          c.publish(mqBase + "photo/" + id, p, { qos: 0, retain: true });
+        });
+        await idb.set("photo:" + id, photoBlob);
+      }
+    } catch (err) {
+      alertMsg("Versleutelen mislukt (" + err.message + "). Probeer het opnieuw.", "err");
+      validate();
+      return;
+    }
+    if (secret) { mine[id] = secret; store.set("mine:" + code, mine); }
+    var json = JSON.stringify(ev);
+    mqPublish("ev/" + id, json);
+    var mqOk = clients.some(function (c) { return c.connected; });
+    var ntfyOk = await publish({ topic: topicData, message: json, tags: [kind] }).then(function () { return true; }, function () { return false; });
+    if (!mqOk && !ntfyOk) {
+      alertMsg("Geen verbinding: de melding is nog niet verstuurd. Controleer je internet; hij wordt alsnog verstuurd zodra de verbinding terug is, of probeer opnieuw.", "err");
+    }
+    ingest(ev);
+    saveItems();
+    filterArea = "all"; store.set("filter", "all");
+    renderHunts();
+
+    // pushmelding naar het kanaal van het gebied (zonder huntcode)
+    var who = ev.by || "Iemand";
+    var title = KIND_LABEL[kind] + " " + ev.area + " om " + hhmm(t);
+    var text = (kind === "hunt" ? who + " heeft " + ev.area + " gehunt" : who + " heeft het vossenteam van " + ev.area + " gezien") +
+      (ev.note ? ": " + ev.note : "") + "\nRD " + rd.x + ", " + rd.y +
+      (kind === "hunt" ? "\nWeer huntbaar om " + hhmm(t + HUNT_INTERVAL) + "." : "") + " Tik om de plek te openen.";
+    publish({ topic: topicArea(ev.area), title: title, message: text, tags: [kind === "hunt" ? "fox_face" : "eyes"], priority: kind === "hunt" ? 4 : 3, click: mapsUrl(ev.lat, ev.lon) }).catch(function () {});
+    if (kind === "hunt") {
+      // geplande melding (ntfy stuurt hem zelf op het juiste moment): vos mag weer gehunt worden
+      var delaySec = Math.round((t + HUNT_INTERVAL - Date.now()) / 1000);
+      if (delaySec >= 30) publish({ topic: topicArea(ev.area), title: ev.area + " mag weer gehunt worden", message: "Het uur na de hunt van " + hhmm(t) + " is voorbij.", tags: ["alarm_clock"], priority: 4, delay: delaySec + "s" }).catch(function () {});
+    }
+
+    if (mqOk || ntfyOk) alertMsg(KIND_LABEL[kind] + " opgeslagen en gemeld aan de groep.", "ok");
+    $("huntNote").value = "";
+    $("huntCode").value = "";
+    setQr("");
+    setPhoto(null, null);
+    if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
+    pos = null; setLocText();
+    map.setView([ev.lat, ev.lon], Math.max(map.getZoom(), 13));
+    setTimeout(function () { showTab("hunts"); }, 1200);
+  });
+
+  // ---------- beheer (alleen admins) ----------
+  async function adminDelete(id) {
+    if (!isAdmin || !signPriv) throw new Error("geen admin");
+    var d = await signEvent({ v: 2, type: "delete", id: id, t: Date.now() });
+    var json = JSON.stringify(d);
+    mqPublish("del/" + id, json);
+    publish({ topic: topicData, message: json, tags: ["wastebasket"] }).catch(function () {});
+    deleted[id] = true;
+    saveItems();
+    renderHunts();
+  }
+
+  var hintPos = null, hintMarker = null;
+  function renderHintAreas() {
+    var s = $("hintArea"), cur = s.value;
+    s.textContent = "";
+    activeAreas().forEach(function (a) { var o = el("option", null, a); o.value = a; s.appendChild(o); });
+    if (cur && areaOn(cur)) s.value = cur;
+  }
+  function hintMsg(text, kind) { $("hintMsg").textContent = text; $("hintMsg").dataset.kind = kind || ""; }
+  function placeHint(lat, lon, fromMap) {
+    hintPos = { lat: lat, lon: lon };
+    var rd = toRD(lat, lon);
+    if (fromMap) {
+      $("hintX").value = rd.x; $("hintY").value = rd.y;
+      $("hintLatLon").value = lat.toFixed(6) + ", " + lon.toFixed(6);
+      stopPicking();
+      if (window.innerWidth < 900) $("pane-admin").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    if (!hintMarker) {
+      hintMarker = L.marker([lat, lon], { draggable: true }).addTo(map);
+      hintMarker.on("dragend", function () { var p = hintMarker.getLatLng(); placeHint(p.lat, p.lng, true); });
+    } else hintMarker.setLatLng([lat, lon]);
+    $("hintLoc").dataset.ok = "1";
+    $("hintLoc").textContent = "RD " + rd.x + ", " + rd.y + "  ·  " + fmtCoord(lat, lon);
+    $("hintSubmit").disabled = !$("hintTime").value;
+  }
+  function clearHint(msg) {
+    hintPos = null;
+    if (hintMarker) { map.removeLayer(hintMarker); hintMarker = null; }
+    $("hintLoc").dataset.ok = "0";
+    $("hintLoc").textContent = msg || "Nog geen locatie";
+    $("hintSubmit").disabled = true;
+  }
+  function parseNum(v) { return parseFloat(String(v).replace(/[\s.](?=\d{3}\b)/g, "").replace(",", ".")); }
+  function onRdInput() {
+    var x = parseNum($("hintX").value), y = parseNum($("hintY").value);
+    if (!$("hintX").value.trim() && !$("hintY").value.trim()) { clearHint(); return; }
+    if (!isFinite(x) || !isFinite(y)) { clearHint("Vul RD X en RD Y in (in meters)."); return; }
+    if (x < 0 || x > 300000 || y < 289000 || y > 629000) { clearHint("Deze RD-coördinaten liggen niet in Nederland. X loopt van 0 tot 300000, Y van 289000 tot 629000."); return; }
+    var ll = fromRD(x, y);
+    $("hintLatLon").value = ll.lat.toFixed(6) + ", " + ll.lon.toFixed(6);
+    placeHint(ll.lat, ll.lon, false);
+    map.setView([ll.lat, ll.lon], Math.max(map.getZoom(), 13));
+  }
+  function onLatLonInput() {
+    var m = $("hintLatLon").value.match(/(-?\d+(?:[.,]\d+)?)\s*[,; ]\s*(-?\d+(?:[.,]\d+)?)/);
+    if (!m) { if (!$("hintLatLon").value.trim()) clearHint(); else clearHint("Vul graden in als: 52.0123, 5.9876"); return; }
+    var lat = parseFloat(m[1].replace(",", ".")), lon = parseFloat(m[2].replace(",", "."));
+    if (!(lat > 50 && lat < 54 && lon > 3 && lon < 8)) { clearHint("Deze coördinaten liggen niet in Nederland."); return; }
+    var rd = toRD(lat, lon);
+    $("hintX").value = rd.x; $("hintY").value = rd.y;
+    placeHint(lat, lon, false);
+    map.setView([lat, lon], Math.max(map.getZoom(), 13));
+  }
+  $("hintX").addEventListener("change", onRdInput);
+  $("hintY").addEventListener("change", onRdInput);
+  $("hintLatLon").addEventListener("change", onLatLonInput);
+  $("hintPick").addEventListener("click", function () { startPicking("hint"); });
+  $("hintTime").addEventListener("input", function () { $("hintSubmit").disabled = !(hintPos && this.value); });
+  $("hintForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    if (!isAdmin || !hintPos || !$("hintTime").value) return;
+    var area = $("hintArea").value;
+    if (!AREA_COLORS[area]) return;
+    $("hintSubmit").disabled = true;
+    hintMsg("Plaatsen…");
+    try {
+      var d = await signEvent({
+        v: 2, type: "hint", id: uid(), area: area,
+        lat: +hintPos.lat.toFixed(6), lon: +hintPos.lon.toFixed(6),
+        t: timeToday($("hintTime").value),
+        note: $("hintNote").value.trim().slice(0, 120),
+        by: getName()
+      });
+      var json = JSON.stringify(d);
+      mqPublish("ev/" + d.id, json);
+      publish({ topic: topicData, message: json, tags: ["hint"] }).catch(function () {});
+      items[d.id] = { id: d.id, kind: "hint", area: d.area, lat: d.lat, lon: d.lon, acc: null, t: d.t, by: d.by, note: d.note, sec: null, photo: false, huntcode: "" };
+      saveItems();
+      renderHunts();
+      var rd = toRD(d.lat, d.lon);
+      publish({ topic: topicArea(area), title: "Hint " + area + " (" + hhmm(d.t) + ") staat op de kaart", message: "RD " + rd.x + ", " + rd.y + (d.note ? "\n" + d.note : "") + "\nTik om de plek te openen.", tags: ["round_pushpin"], priority: 3, click: mapsUrl(d.lat, d.lon) }).catch(function () {});
+      hintMsg("Hint " + area + " geplaatst.", "ok");
+      $("hintX").value = ""; $("hintY").value = ""; $("hintLatLon").value = ""; $("hintNote").value = "";
+      clearHint();
+    } catch (err) {
+      hintMsg("Plaatsen mislukt: " + err.message, "err");
+      $("hintSubmit").disabled = false;
+    }
+  });
+
+  function renderAreaToggles() {
+    var w = $("areaToggles");
+    w.textContent = "";
+    AREAS.forEach(function (a) {
+      var lab = el("label", "toggle");
+      var inp = el("input");
+      inp.type = "checkbox"; inp.checked = areaOn(a); inp.id = "toggle-" + a.toLowerCase();
+      inp.addEventListener("change", function () { saveAreaToggles(); });
+      var i = el("i"); i.style.background = AREA_COLORS[a];
+      lab.appendChild(inp); lab.appendChild(i); lab.appendChild(document.createTextNode(a));
+      lab.appendChild(el("span", null, inp.checked ? "zichtbaar" : "uitgeschakeld"));
+      w.appendChild(lab);
+    });
+  }
+  async function saveAreaToggles() {
+    if (!isAdmin) return;
+    var disabled = AREAS.filter(function (a) { var c = $("toggle-" + a.toLowerCase()); return c && !c.checked; });
+    $("areaMsg").dataset.kind = "";
+    $("areaMsg").textContent = "Opslaan…";
+    try {
+      var d = await signEvent({ v: 2, type: "areas", disabled: disabled, t: Date.now() });
+      mqPublish("config", JSON.stringify(d));
+      areaCfg = { disabled: disabled, t: d.t };
+      store.set("areas:" + code, areaCfg);
+      rerenderAreas();
+      $("areaMsg").dataset.kind = "ok";
+      $("areaMsg").textContent = disabled.length ? "Uitgeschakeld voor iedereen: " + disabled.join(", ") + "." : "Alle gebieden zijn zichtbaar.";
+    } catch (err) {
+      $("areaMsg").dataset.kind = "err";
+      $("areaMsg").textContent = "Opslaan mislukt: " + err.message;
+    }
+  }
+
+  function csvCell(v) {
+    var s = v == null ? "" : String(v);
+    return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  $("btnExport").addEventListener("click", async function () {
+    if (!isAdmin) return;
+    $("exportMsg").dataset.kind = "";
+    $("exportMsg").textContent = "Exporteren…";
+    var rows = [["soort", "gebied", "datum", "tijd", "gemeld_door", "huntcode", "qr", "rd_x", "rd_y", "lat", "lon", "nauwkeurigheid_m", "notitie", "foto", "gewist", "id"]];
+    var list = Object.keys(items).map(function (k) { return items[k]; }).sort(function (a, b) { return a.t - b.t; });
+    for (var i = 0; i < list.length; i++) {
+      var h = list[i], s = null;
+      if (h.kind === "hunt") s = await huntSecret(h);
+      var d = new Date(h.t), rd = toRD(h.lat, h.lon);
+      rows.push([KIND_LABEL[h.kind], h.area, d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()), hhmm(h.t), h.by,
+        s && !s.error ? s.huntcode : "", s && !s.error ? s.qr : "", rd.x, rd.y,
+        h.lat.toFixed(6).replace(".", ","), h.lon.toFixed(6).replace(".", ","), h.acc || "", h.note, h.photo ? "ja" : "", deleted[h.id] ? "ja" : "", h.id]);
+    }
+    var csv = "﻿" + rows.map(function (r) { return r.map(csvCell).join(";"); }).join("\r\n");
+    var a = el("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    var now = new Date();
+    a.download = "vossenkaart-" + now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + "-" + pad(now.getHours()) + pad(now.getMinutes()) + ".csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    $("exportMsg").dataset.kind = "ok";
+    $("exportMsg").textContent = (rows.length - 1) + " regels geëxporteerd.";
+  });
+
+  // ---------- meldingen-abonnementen ----------
   function renderSubs() {
     var w = $("subs");
     w.textContent = "";
-    function row(label, topic, color) {
+    activeAreas().forEach(function (a) {
+      var topic = topicArea(a);
       var r = el("div", "sub");
-      var i = el("i"); i.style.background = color; r.appendChild(i);
+      var i = el("i"); i.style.background = AREA_COLORS[a]; r.appendChild(i);
       var t = el("div", "t");
-      t.appendChild(el("b", null, label));
+      t.appendChild(el("b", null, a));
       t.appendChild(el("code", null, topic));
       r.appendChild(t);
       var acts = el("div", "acts");
-      var a = el("a", "linkbtn", "Abonneren");
-      a.href = "ntfy://ntfy.sh/" + topic;
-      acts.appendChild(a);
-      var c = el("button", "linkbtn", "Kopieer");
-      c.type = "button";
-      c.addEventListener("click", function () { copy(topic, c); });
-      acts.appendChild(c);
+      var link = el("a", "linkbtn", "Abonneren");
+      link.href = "ntfy://ntfy.sh/" + topic;
+      acts.appendChild(link);
+      acts.appendChild(copyBtn(topic));
       r.appendChild(acts);
       w.appendChild(r);
-    }
-    AREAS.forEach(function (a) { row(a, topicArea(a), AREA_COLORS[a]); });
+    });
   }
-  function copy(text, btn) {
-    var done = function () { var o = btn.textContent; btn.textContent = "Gekopieerd"; setTimeout(function () { btn.textContent = o; }, 1500); };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
-    } else { fallbackCopy(text); done(); }
-  }
-  function fallbackCopy(text) {
-    var t = el("textarea"); t.value = text; document.body.appendChild(t); t.select();
-    try { document.execCommand("copy"); } catch (e) {}
-    t.remove();
-  }
-  renderSubs();
-  var share = location.href.split("#")[0] + "#" + code;
+  var share = location.href.split("#")[0];
   $("shareUrl").value = share;
   $("btnCopy").addEventListener("click", function () { copy(share, $("btnCopy")); });
+  $("btnLogout").addEventListener("click", function () {
+    if (sharing) setSharing(false);
+    store.del("session2");
+    setTimeout(function () { location.reload(); }, 300);
+  });
+
+  // ---------- starten ----------
+  setKind("hunt");
+  renderAreaPick();
+  renderHintAreas();
+  renderAreaToggles();
+  renderSubs();
+  $("huntTime").value = nowTime();
+  $("hintTime").value = nowTime();
+  $("huntBy").value = store.get("by", "") || getName();
+  renderName();
+  $("huntBy").addEventListener("input", function () { store.set("by", this.value); });
+  if (!getName()) setTimeout(function () { if ($("nameDlg").hidden) openNameDlg(); }, 700);
+  updateCountdowns();
+  setInterval(updateCountdowns, 1000);
+
+  renderHunts();
+  connectMq();
+  if (store.get("sharing", false)) setTimeout(function () { setSharing(true); }, 500);
+  poll(true)
+    .then(function () { if (!liveOpen) setConn(true, "Verbonden"); })
+    .catch(function () { setConn(false, "Geen verbinding met ntfy.sh"); })
+    .then(openLive);
+  setInterval(pollTick, 20000);
+  setInterval(renderHunts, 60000); // "x min geleden" bijwerken
 })();
 </script>
 </body>
