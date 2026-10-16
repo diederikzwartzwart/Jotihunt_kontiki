@@ -155,11 +155,14 @@ body:not(.is-admin) .admin-only { display: none !important; }
   inset: 0;
   z-index: 2000;
   background: rgba(10, 14, 12, .55);
-  display: grid;
-  place-items: center;
-  padding: 16px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
   overflow-y: auto;
 }
+/* past het venster niet, dan begint het bovenaan (zodat het kruisje bereikbaar blijft) en scrolt het */
+.dlg > .dlgbox { margin-block: auto; }
 .dlgbox {
   width: 100%;
   max-width: 400px;
@@ -595,11 +598,16 @@ textarea { min-height: 70px; resize: vertical; }
 .setup p { margin: 0; }
 
 /* Detailvenster */
-.detail { max-width: 880px; padding: 0; overflow: hidden; }
+.detail { max-width: 880px; padding: 0; }
 .detail-head {
   display: flex; align-items: center; gap: 12px;
   padding: 14px 18px;
   border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  border-radius: 14px 14px 0 0;
 }
 .detail-head h2 { font-size: 1.5rem; }
 .detail-head .x {
@@ -622,7 +630,7 @@ textarea { min-height: 70px; resize: vertical; }
   padding: 0;
 }
 .photo-box a { display: block; width: 100%; }
-.photo-box img { width: 100%; height: auto; display: block; }
+.photo-box img { width: 100%; height: auto; max-height: 55vh; object-fit: contain; display: block; }
 .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 9px 16px; align-items: baseline; margin: 0; }
 .kv dt { color: var(--muted); font-size: .85rem; }
 .kv dd { margin: 0; display: flex; gap: 8px 12px; align-items: baseline; flex-wrap: wrap; min-width: 0; overflow-wrap: anywhere; }
