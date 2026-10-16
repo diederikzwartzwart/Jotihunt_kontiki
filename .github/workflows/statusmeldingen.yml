@@ -5,6 +5,9 @@
 # <groepscode>-<gebied> (bijv. <groepscode>-alpha).
 # Elk uur wordt er een nieuwe taak ingepland; die wacht tot de lopende klaar is en neemt het dan over.
 #
+# Alleen actief tijdens de Jotihunt 2026: za 17 okt 08:30 t/m zo 18 okt 12:30 (Nederlandse tijd).
+# Daarbuiten stopt elke taak meteen. Een taak die tot 90 minuten vóór de start begint, wacht tot de start.
+#
 # Secrets (Settings > Secrets and variables > Actions):
 #   NTFY_TOPIC  verplicht: jullie groepscode (bijv. jotihunt-...)
 #   NTFY_TOKEN  optioneel: toegangstoken van een betaald ntfy-account (meer berichten per dag)
@@ -38,9 +41,13 @@ jobs:
           ONLY_TEST: ${{ inputs.test || 'false' }}
           RUN_MINUTES: "345"
           INTERVAL_SECONDS: "30"
+          # in UTC: NL-tijd (zomertijd) min 2 uur
+          WINDOW_START: "2026-10-17T06:30:00Z"
+          WINDOW_END: "2026-10-18T10:30:00Z"
         run: |
           python3 -u - <<'EOF'
           import json, os, sys, time, urllib.request
+          from datetime import datetime, timezone
 
           TOPIC = os.environ.get("NTFY_TOPIC", "").strip()
           if not TOPIC:
@@ -84,6 +91,23 @@ jobs:
               send(TOPIC, "Jotihunt testmelding (GitHub)", "Als je dit ziet werken de statusmeldingen via GitHub!", "white_check_mark", 3)
               print("Testmelding verstuurd.")
               sys.exit(0)
+
+          def ts(v):
+              return datetime.fromisoformat(v.replace("Z", "+00:00")).timestamp() if v else None
+
+          W_START, W_END = ts(os.environ.get("WINDOW_START")), ts(os.environ.get("WINDOW_END"))
+          if W_END and time.time() >= W_END:
+              print("De Jotihunt is voorbij; niets te doen. Zet deze workflow uit via Actions > Statusmeldingen > ... > Disable workflow.")
+              sys.exit(0)
+          if W_START and time.time() < W_START:
+              wait = W_START - time.time()
+              if wait > 90 * 60:
+                  print(f"Nog {wait / 3600:.1f} uur tot de start; deze taak stopt. Een latere taak neemt het op tijd over.")
+                  sys.exit(0)
+              print(f"Wachten tot de start ({wait / 60:.0f} min)...")
+              time.sleep(wait)
+          if W_END:
+              END = min(END, W_END)
 
           prev, fails, warned, last_check = None, 0, False, time.time()
           while time.time() < END:
