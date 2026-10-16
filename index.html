@@ -1,0 +1,1117 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f5f45">
+<title>Vossenkaart</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: veldkaart-app. Statusstrook bovenaan, kaart als hoofdvlak, paneel met tabbladen eronder (telefoon) of ernaast (breed scherm). */
+:root {
+  --bg: #eef0ea;
+  --surface: #ffffff;
+  --surface-2: #f6f7f3;
+  --fg: #1c231f;
+  --muted: #5b675f;
+  --line: #d6dbd2;
+  --accent: #1f5f45;
+  --accent-fg: #ffffff;
+  --st-red: #c62828;
+  --st-orange: #d97f00;
+  --st-green: #2e8540;
+  --st-unknown: #8a948d;
+  --danger: #b3261e;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111513;
+    --surface: #1a1f1c;
+    --surface-2: #212723;
+    --fg: #e5eae5;
+    --muted: #98a59c;
+    --line: #2d3530;
+    --accent: #62c08f;
+    --accent-fg: #0c1410;
+    --st-red: #ef5350;
+    --st-orange: #ffb347;
+    --st-green: #5fd07b;
+    --st-unknown: #6f7a73;
+    --danger: #ff6b60;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111513;
+  --surface: #1a1f1c;
+  --surface-2: #212723;
+  --fg: #e5eae5;
+  --muted: #98a59c;
+  --line: #2d3530;
+  --accent: #62c08f;
+  --accent-fg: #0c1410;
+  --st-red: #ef5350;
+  --st-orange: #ffb347;
+  --st-green: #5fd07b;
+  --st-unknown: #6f7a73;
+  --danger: #ff6b60;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.45 var(--font-body);
+  -webkit-text-size-adjust: 100%;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Kop */
+.top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.45rem;
+  letter-spacing: .02em;
+  line-height: 1;
+  margin: 0;
+}
+.brand small {
+  font-weight: 600;
+  font-size: .8rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  opacity: .8;
+  margin-left: 6px;
+}
+.conn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .8rem;
+  opacity: .9;
+}
+.conn i {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--st-unknown);
+  display: inline-block;
+}
+.conn[data-ok="1"] i { background: var(--st-green); }
+.conn[data-ok="0"] i { background: var(--st-red); }
+
+/* Statusstrook */
+.status {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: thin;
+}
+.chip {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  align-items: center;
+  padding: 6px 10px 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  min-width: 96px;
+}
+.chip .dot {
+  grid-row: span 2;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--st-unknown);
+}
+.chip[data-s="red"] .dot { background: var(--st-red); }
+.chip[data-s="orange"] .dot { background: var(--st-orange); }
+.chip[data-s="green"] .dot { background: var(--st-green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--st-green) 30%, transparent); }
+.chip b {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.05;
+  letter-spacing: .02em;
+}
+.chip span {
+  font-size: .75rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.chip.flash { animation: flash 1.2s ease-out 3; }
+@keyframes flash { 0% { background: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); } 100% { background: var(--surface-2); } }
+
+/* Hoofdvlak */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.mapwrap { position: relative; height: 56vh; min-height: 300px; }
+#map { position: absolute; inset: 0; background: var(--surface-2); }
+.mapbtn {
+  position: absolute;
+  right: 10px;
+  bottom: 24px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mapbtn button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0,0,0,.18);
+  cursor: pointer;
+}
+.mapbtn button.primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: transparent;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: .03em;
+  padding: 10px 16px;
+}
+.maphint {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  z-index: 500;
+  background: var(--fg);
+  color: var(--bg);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: .85rem;
+  font-weight: 600;
+  max-width: calc(100% - 32px);
+  text-align: center;
+}
+
+.panel {
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  padding-left: max(8px, env(safe-area-inset-left, 0px));
+  padding-right: max(8px, env(safe-area-inset-right, 0px));
+}
+.tabs button {
+  flex: 1;
+  border: 0;
+  background: none;
+  padding: 12px 6px 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+}
+.tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.tabs .count {
+  font-family: var(--font-body);
+  font-size: .75rem;
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 7px;
+  margin-left: 4px;
+  vertical-align: 2px;
+}
+.tabpane {
+  padding-block: 14px 28px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: .85rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+}
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+
+/* Filter */
+.filter { display: flex; flex-wrap: wrap; gap: 6px; }
+.filter button {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.filter button i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.filter button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+/* Huntlijst */
+.hunts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.hunt {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.hunt:last-child { border-bottom: 0; }
+.badge {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+.hunt .body { min-width: 0; }
+.hunt .head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.hunt .head b { font-family: var(--font-display); font-size: 1.15rem; letter-spacing: .02em; }
+.hunt .time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .85rem; }
+.hunt .note { margin-top: 2px; overflow-wrap: anywhere; }
+.hunt .acts { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.linkbtn {
+  border: 0; background: none; padding: 2px 0;
+  color: var(--accent); font-weight: 600; font-size: .85rem; cursor: pointer;
+  text-decoration: none;
+}
+.linkbtn.danger { color: var(--danger); }
+.empty {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Formulier */
+.form { display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > label, .field > .label { font-weight: 600; font-size: .9rem; color: var(--fg); font-family: var(--font-body); letter-spacing: 0; text-transform: none; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row > * { flex: 1 1 140px; min-width: 0; }
+input[type="text"], input[type="time"], select, textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  padding: 10px 12px;
+  min-height: 44px;
+}
+textarea { min-height: 70px; resize: vertical; }
+.areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.areas label {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: var(--surface-2);
+  cursor: pointer;
+  font-weight: 600;
+}
+.areas input { position: absolute; opacity: 0; pointer-events: none; }
+.areas i { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; }
+.areas label:has(input:checked) { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); background: var(--surface); }
+.areas label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button {
+  flex: 1; border: 0; background: var(--surface-2); padding: 10px; font-weight: 600; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.loc {
+  font-variant-numeric: tabular-nums;
+  font-size: .9rem;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.loc[data-ok="1"] { border-color: var(--st-green); }
+.btn {
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  padding: 13px 16px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn.ghost { background: var(--surface-2); color: var(--fg); border: 1px solid var(--line); font-family: var(--font-body); font-size: .95rem; font-weight: 600; letter-spacing: 0; padding: 9px 12px; }
+.msg { font-weight: 600; font-size: .9rem; }
+.msg[data-kind="err"] { color: var(--danger); }
+.msg[data-kind="ok"] { color: var(--st-green); }
+
+/* Meldingen */
+.subs { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.sub {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.sub:last-child { border-bottom: 0; }
+.sub i { width: 14px; height: 14px; border-radius: 50%; }
+.sub .t { min-width: 0; }
+.sub .t b { display: block; }
+.sub code { font-size: .78rem; color: var(--muted); overflow-wrap: anywhere; }
+.sub .acts { display: flex; gap: 12px; }
+.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.share {
+  display: flex; gap: 8px; align-items: stretch;
+}
+.share input { flex: 1; min-width: 0; font-size: .85rem; }
+
+/* Setup */
+.setup {
+  max-width: 460px;
+  margin: 40px auto;
+  padding-inline: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.setup h1 { font-family: var(--font-display); font-size: 2rem; margin: 0; text-wrap: balance; }
+
+/* Kaartmarkers */
+.hm {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 5px rgba(0,0,0,.45);
+  display: grid; place-items: center;
+  color: #fff;
+  font: 700 15px/1 var(--font-display);
+}
+.hm.fresh { width: 36px; height: 36px; font-size: 18px; animation: pulse 2s ease-out infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0,0,0,.45); } 70% { box-shadow: 0 0 0 14px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
+.me { width: 16px; height: 16px; border-radius: 50%; background: #1a73e8; border: 3px solid #fff; box-shadow: 0 0 0 2px rgba(26,115,232,.35); }
+.leaflet-popup-content { font: 14px/1.4 var(--font-body); }
+.leaflet-popup-content b { font-family: var(--font-display); font-size: 1.05rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hm.fresh, .chip.flash { animation: none; }
+}
+
+/* Breed scherm: paneel naast de kaart */
+@media (min-width: 900px) {
+  .app { height: 100%; }
+  .main { flex-direction: row; }
+  .mapwrap { flex: 1; height: auto; }
+  .panel { width: 400px; border-top: 0; border-left: 1px solid var(--line); }
+  .tabpane { flex: 1; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <h1 class="brand">Vossenkaart<small>Jotihunt</small></h1>
+    <div class="conn" id="conn" title="Verbinding met het huntkanaal"><i></i><span id="connText">Verbinden…</span></div>
+  </header>
+
+  <section class="status" id="status" aria-label="Status per deelgebied"></section>
+
+  <div class="main">
+    <div class="mapwrap">
+      <div id="map" aria-label="Kaart met hunts en groepen"></div>
+      <div class="maphint" id="maphint" hidden>Tik op de kaart waar de hunt was</div>
+      <div class="mapbtn">
+        <button type="button" id="btnMe">Mijn locatie</button>
+        <button type="button" id="btnGroups" aria-pressed="true">Groepen</button>
+        <button type="button" class="primary" id="btnReport">+ Hunt melden</button>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tab-hunts" aria-controls="pane-hunts" aria-selected="true">Hunts<span class="count" id="huntCount">0</span></button>
+        <button type="button" role="tab" id="tab-report" aria-controls="pane-report" aria-selected="false">Melden</button>
+        <button type="button" role="tab" id="tab-notify" aria-controls="pane-notify" aria-selected="false">Meldingen</button>
+      </div>
+
+      <section class="tabpane" id="pane-hunts" role="tabpanel" aria-labelledby="tab-hunts">
+        <div class="filter" id="filter" aria-label="Filter op deelgebied"></div>
+        <ul class="hunts" id="huntList"></ul>
+        <div class="empty" id="huntEmpty">Nog geen hunts. Tik op <b>+ Hunt melden</b> zodra jullie een vos gehunt hebben; hij verschijnt dan direct op ieders kaart.</div>
+      </section>
+
+      <section class="tabpane" id="pane-report" role="tabpanel" aria-labelledby="tab-report" hidden>
+        <form class="form" id="reportForm" novalidate>
+          <div class="field">
+            <span class="label">Deelgebied</span>
+            <div class="areas" id="areaPick" role="radiogroup" aria-label="Deelgebied"></div>
+          </div>
+          <div class="field">
+            <span class="label">Locatie</span>
+            <div class="seg" role="group" aria-label="Locatie bepalen">
+              <button type="button" id="locGps" aria-pressed="true">Mijn GPS</button>
+              <button type="button" id="locMap" aria-pressed="false">Kies op kaart</button>
+            </div>
+            <div class="loc" id="locText">Nog geen locatie</div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="huntTime">Tijd</label>
+              <input type="time" id="huntTime" required>
+            </div>
+            <div class="field">
+              <label for="huntBy">Wie</label>
+              <input type="text" id="huntBy" placeholder="bijv. Auto 2 – Sanne" maxlength="40" autocomplete="off">
+            </div>
+          </div>
+          <div class="field">
+            <label for="huntNote">Notitie <span class="muted">(optioneel)</span></label>
+            <textarea id="huntNote" maxlength="200" placeholder="bijv. bij de kerk, vos liep richting bos"></textarea>
+          </div>
+          <button class="btn" type="submit" id="btnSubmit" disabled>Hunt opslaan</button>
+          <div class="msg" id="formMsg" role="status"></div>
+        </form>
+      </section>
+
+      <section class="tabpane" id="pane-notify" role="tabpanel" aria-labelledby="tab-notify" hidden>
+        <p class="label">Zo krijg je meldingen</p>
+        <ol class="steps">
+          <li>Installeer de gratis app <b>ntfy</b> (Play Store / App Store).</li>
+          <li>Tik hieronder op <b>Abonneren</b> bij de gebieden die jij wilt volgen. Werkt de knop niet, tik dan in de app op <b>+</b> en plak de kanaalnaam.</li>
+          <li>Je krijgt een melding als dat gebied van status wisselt of als iemand daar een hunt meldt.</li>
+        </ol>
+        <div class="subs" id="subs"></div>
+        <p class="small muted">Kies óf <b>Alle gebieden</b>, óf losse gebieden. Allebei geeft dubbele meldingen.</p>
+
+        <p class="label">Deel met je groep</p>
+        <div class="share">
+          <input type="text" id="shareUrl" readonly aria-label="Link voor je groep">
+          <button type="button" class="btn ghost" id="btnCopy">Kopieer</button>
+        </div>
+        <p class="small muted">Iedereen met deze link kan hunts zien en melden. Deel hem alleen in jullie eigen groepsapp.</p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<div class="setup" id="setup" hidden>
+  <h1>Vossenkaart</h1>
+  <p>Open deze pagina via de link die je groep heeft gedeeld, of vul hieronder jullie groepscode in.</p>
+  <form class="form" id="setupForm">
+    <div class="field">
+      <label for="setupCode">Groepscode</label>
+      <input type="text" id="setupCode" placeholder="jotihunt-…" autocomplete="off" required pattern="[A-Za-z0-9_-]{6,64}">
+    </div>
+    <button class="btn" type="submit">Openen</button>
+  </form>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // Kleuren per deelgebied, zoals op jotihunt.nl/subscriptions/map
+  var AREA_COLORS = {
+    Alpha: "#c2413a", Bravo: "#b85c16", Charlie: "#a67c00", Delta: "#2f855a",
+    Echo: "#0f766e", Foxtrot: "#2563a6", Golf: "#6d5ba7", Hotel: "#a33d6b", Oscar: "#5b6470"
+  };
+  var AREAS = Object.keys(AREA_COLORS);
+  var STATUS_LABEL = { red: "Rood", orange: "Oranje", green: "Groen", yellow: "Geel" };
+  var API = "https://jotihunt.nl/api/2.0";
+  var NTFY = "https://ntfy.sh";
+  var CODE_RE = /^[A-Za-z0-9_-]{6,64}$/;
+
+  // ---------- opslag (alleen gemak per apparaat) ----------
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  // ---------- groepscode ----------
+  function readCode() {
+    var h = decodeURIComponent((location.hash || "").replace(/^#/, ""));
+    if (CODE_RE.test(h)) { store.set("code", h); return h; }
+    var s = store.get("code", null);
+    return CODE_RE.test(s || "") ? s : null;
+  }
+  var code = readCode();
+  if (!code) {
+    document.getElementById("app").hidden = true;
+    document.getElementById("setup").hidden = false;
+    document.getElementById("setupForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var v = document.getElementById("setupCode").value.trim();
+      if (!CODE_RE.test(v)) return;
+      location.hash = v;
+      location.reload();
+    });
+    return;
+  }
+  if (location.hash.replace(/^#/, "") !== code) history.replaceState(null, "", "#" + code);
+
+  var topicAll = code;
+  var topicData = code + "-data";
+  function topicArea(a) { return code + "-" + a.toLowerCase(); }
+
+  // ---------- helpers ----------
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function hhmm(t) { var d = new Date(t); return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function ago(t) {
+    var m = Math.round((Date.now() - t) / 60000);
+    if (m < 1) return "zojuist";
+    if (m < 60) return m + " min geleden";
+    var h = Math.floor(m / 60), r = m % 60;
+    return h + " u " + (r ? r + " min " : "") + "geleden";
+  }
+  function dayLabel(t) {
+    var d = new Date(t), now = new Date();
+    if (d.toDateString() === now.toDateString()) return "";
+    if (now - d < 6 * 86400000) return ["zo", "ma", "di", "wo", "do", "vr", "za"][d.getDay()] + " ";
+    return d.getDate() + " " + ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"][d.getMonth()] + " ";
+  }
+  function uid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+  function mapsUrl(lat, lon) { return "https://www.google.com/maps/search/?api=1&query=" + lat.toFixed(6) + "," + lon.toFixed(6); }
+  function fmtCoord(lat, lon) { return lat.toFixed(5) + ", " + lon.toFixed(5); }
+
+  // ---------- kaart ----------
+  var map = L.map("map", { zoomControl: true }).setView([52.07, 5.95], 9);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+  var groupLayer = L.layerGroup().addTo(map);
+  var huntLayer = L.layerGroup().addTo(map);
+  var meMarker = null, meCircle = null, pickMarker = null;
+
+  // ---------- status per deelgebied ----------
+  var lastStatus = {};
+  function renderStatus(list) {
+    var wrap = $("status");
+    var first = !wrap.children.length;
+    wrap.textContent = "";
+    list.forEach(function (a) {
+      var c = el("div", "chip");
+      c.dataset.s = a.status;
+      c.appendChild(el("i", "dot"));
+      c.appendChild(el("b", null, a.name));
+      var since = a.updated_at ? new Date(a.updated_at) : null;
+      var sinceTxt = since ? (dayLabel(since) + hhmm(since)) : "";
+      c.appendChild(el("span", null, (STATUS_LABEL[a.status] || a.status) + (sinceTxt ? " · " + sinceTxt : "")));
+      c.title = a.name + ": " + (STATUS_LABEL[a.status] || a.status);
+      if (!first && lastStatus[a.name] && lastStatus[a.name] !== a.status) c.classList.add("flash");
+      lastStatus[a.name] = a.status;
+      wrap.appendChild(c);
+    });
+  }
+  function loadStatus() {
+    fetch(API + "/areas", { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (j) { renderStatus(j.data || []); })
+      .catch(function () {
+        if (!$("status").children.length) renderStatus(AREAS.map(function (n) { return { name: n, status: "?" }; }));
+      });
+  }
+  loadStatus();
+  setInterval(loadStatus, 60000);
+
+  // ---------- groepen op de kaart ----------
+  var groupsShown = store.get("groups", true);
+  function setGroupsShown(v) {
+    groupsShown = v;
+    store.set("groups", v);
+    $("btnGroups").setAttribute("aria-pressed", v ? "true" : "false");
+    if (v) groupLayer.addTo(map); else map.removeLayer(groupLayer);
+  }
+  setGroupsShown(groupsShown);
+  $("btnGroups").addEventListener("click", function () { setGroupsShown(!groupsShown); });
+  fetch(API + "/subscriptions")
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      (j.data || []).forEach(function (g) {
+        var lat = parseFloat(g.lat), lon = parseFloat(g.long);
+        if (!isFinite(lat) || !isFinite(lon)) return;
+        var col = AREA_COLORS[g.area] || "#5b6470";
+        var m = L.circleMarker([lat, lon], { radius: 5, color: "#fff", weight: 1.5, fillColor: col, fillOpacity: .85 });
+        var p = el("div");
+        p.appendChild(el("b", null, g.name));
+        p.appendChild(el("div", null, (g.accomodation ? g.accomodation + ", " : "") + (g.city || "")));
+        p.appendChild(el("div", "muted", "Deelgebied " + g.area));
+        m.bindPopup(p);
+        m.addTo(groupLayer);
+      });
+    })
+    .catch(function () {});
+
+  // ---------- hunts ----------
+  var hunts = store.get("hunts:" + code, {});
+  var deleted = store.get("deleted:" + code, {});
+  var lastId = store.get("lastId:" + code, null);
+  var filterArea = store.get("filter", "all");
+
+  function saveHunts() {
+    store.set("hunts:" + code, hunts);
+    store.set("deleted:" + code, deleted);
+    store.set("lastId:" + code, lastId);
+  }
+
+  function handleMessage(m) {
+    if (!m || m.event !== "message") return false;
+    lastId = m.id;
+    var d;
+    try { d = JSON.parse(m.message); } catch (e) { return false; }
+    if (!d || typeof d !== "object") return false;
+    if (d.type === "hunt" && typeof d.id === "string" && AREA_COLORS[d.area] && isFinite(d.lat) && isFinite(d.lon)) {
+      hunts[d.id] = {
+        id: d.id, area: d.area, lat: +d.lat, lon: +d.lon,
+        acc: isFinite(d.acc) ? Math.round(d.acc) : null,
+        t: isFinite(d.t) ? +d.t : m.time * 1000,
+        by: String(d.by || "").slice(0, 40),
+        note: String(d.note || "").slice(0, 200)
+      };
+      return true;
+    }
+    if (d.type === "delete" && typeof d.id === "string") {
+      deleted[d.id] = true;
+      return true;
+    }
+    return false;
+  }
+
+  function visibleHunts() {
+    return Object.keys(hunts)
+      .map(function (k) { return hunts[k]; })
+      .filter(function (h) { return !deleted[h.id] && (filterArea === "all" || h.area === filterArea); })
+      .sort(function (a, b) { return b.t - a.t; });
+  }
+
+  function renderFilter() {
+    var f = $("filter");
+    f.textContent = "";
+    var all = Object.keys(hunts).filter(function (k) { return !deleted[k]; }).map(function (k) { return hunts[k]; });
+    function add(key, label, color) {
+      var b = el("button");
+      b.type = "button";
+      if (color) { var i = el("i"); i.style.background = color; b.appendChild(i); }
+      var n = key === "all" ? all.length : all.filter(function (h) { return h.area === key; }).length;
+      b.appendChild(document.createTextNode(label + (n ? " " + n : "")));
+      b.setAttribute("aria-pressed", filterArea === key ? "true" : "false");
+      b.addEventListener("click", function () { filterArea = key; store.set("filter", key); renderHunts(); });
+      f.appendChild(b);
+    }
+    add("all", "Alle", null);
+    AREAS.forEach(function (a) { add(a, a, AREA_COLORS[a]); });
+  }
+
+  var confirmId = null;
+  var markers = {};
+  function renderHunts() {
+    renderFilter();
+    var list = visibleHunts();
+    var ul = $("huntList");
+    ul.textContent = "";
+    $("huntEmpty").hidden = list.length > 0;
+    $("huntCount").textContent = Object.keys(hunts).filter(function (k) { return !deleted[k]; }).length;
+
+    huntLayer.clearLayers();
+    markers = {};
+    list.slice().reverse().forEach(function (h) {
+      var age = Date.now() - h.t;
+      var fresh = age < 3600000;
+      var col = AREA_COLORS[h.area];
+      var icon = L.divIcon({
+        className: "",
+        html: '<div class="hm' + (fresh ? " fresh" : "") + '" style="background:' + col + '">' + h.area.charAt(0) + "</div>",
+        iconSize: fresh ? [36, 36] : [30, 30],
+        iconAnchor: fresh ? [18, 18] : [15, 15]
+      });
+      var mk = L.marker([h.lat, h.lon], { icon: icon, opacity: age < 3 * 3600000 ? 1 : .55, zIndexOffset: fresh ? 1000 : 0 });
+      var p = el("div");
+      p.appendChild(el("b", null, "Hunt " + h.area));
+      p.appendChild(el("div", null, dayLabel(h.t) + hhmm(h.t) + " · " + ago(h.t)));
+      if (h.by) p.appendChild(el("div", null, h.by));
+      if (h.note) p.appendChild(el("div", "muted", h.note));
+      var a = el("a", null, "Route in Google Maps");
+      a.href = mapsUrl(h.lat, h.lon); a.target = "_blank"; a.rel = "noopener";
+      p.appendChild(a);
+      mk.bindPopup(p);
+      mk.addTo(huntLayer);
+      markers[h.id] = mk;
+    });
+
+    list.forEach(function (h) {
+      var li = el("li", "hunt");
+      var bd = el("div", "badge", h.area.charAt(0));
+      bd.style.background = AREA_COLORS[h.area];
+      li.appendChild(bd);
+      var body = el("div", "body");
+      var head = el("div", "head");
+      head.appendChild(el("b", null, h.area));
+      head.appendChild(el("span", "time", dayLabel(h.t) + hhmm(h.t) + " · " + ago(h.t)));
+      body.appendChild(head);
+      if (h.by) body.appendChild(el("div", "small", h.by));
+      if (h.note) body.appendChild(el("div", "note small muted", h.note));
+      li.appendChild(body);
+      var acts = el("div", "acts");
+      var show = el("button", "linkbtn", "Toon");
+      show.type = "button";
+      show.addEventListener("click", function () {
+        map.setView([h.lat, h.lon], Math.max(map.getZoom(), 14));
+        if (markers[h.id]) markers[h.id].openPopup();
+        if (window.innerWidth < 900) $("map").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      acts.appendChild(show);
+      var route = el("a", "linkbtn", "Route");
+      route.href = mapsUrl(h.lat, h.lon); route.target = "_blank"; route.rel = "noopener";
+      acts.appendChild(route);
+      var del = el("button", "linkbtn danger", confirmId === h.id ? "Zeker wissen?" : "Wissen");
+      del.type = "button";
+      del.addEventListener("click", function () {
+        if (confirmId !== h.id) { confirmId = h.id; renderHunts(); return; }
+        confirmId = null;
+        deleted[h.id] = true; saveHunts(); renderHunts();
+        publish({ topic: topicData, message: JSON.stringify({ v: 1, type: "delete", id: h.id }) }).catch(function () {});
+      });
+      acts.appendChild(del);
+      li.appendChild(acts);
+      ul.appendChild(li);
+    });
+  }
+
+  // ---------- ntfy: hunts ophalen en live volgen ----------
+  function setConn(ok, text) {
+    $("conn").dataset.ok = ok ? "1" : "0";
+    $("connText").textContent = text;
+  }
+  function publish(obj) {
+    return fetch(NTFY + "/", { method: "POST", body: JSON.stringify(obj) })
+      .then(function (r) { if (!r.ok) throw new Error("ntfy " + r.status); return r.json(); });
+  }
+  function loadHistory() {
+    return fetch(NTFY + "/" + topicData + "/json?poll=1&since=all")
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (txt) {
+        txt.split("\n").forEach(function (line) {
+          if (!line.trim()) return;
+          try { handleMessage(JSON.parse(line)); } catch (e) {}
+        });
+        saveHunts();
+        renderHunts();
+      });
+  }
+  var es = null;
+  function openLive() {
+    if (es) es.close();
+    es = new EventSource(NTFY + "/" + topicData + "/sse" + (lastId ? "?since=" + encodeURIComponent(lastId) : ""));
+    es.onopen = function () { setConn(true, "Live"); };
+    es.onerror = function () { setConn(false, "Opnieuw verbinden…"); };
+    es.onmessage = function (e) {
+      var m; try { m = JSON.parse(e.data); } catch (x) { return; }
+      if (handleMessage(m)) { saveHunts(); renderHunts(); }
+    };
+  }
+  renderHunts();
+  loadHistory().catch(function () { setConn(false, "Geen verbinding"); }).then(openLive);
+  setInterval(renderHunts, 60000); // "x min geleden" bijwerken
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") { loadStatus(); loadHistory().catch(function () {}); }
+  });
+
+  // ---------- tabbladen ----------
+  var TABS = ["hunts", "report", "notify"];
+  function showTab(name) {
+    TABS.forEach(function (t) {
+      $("tab-" + t).setAttribute("aria-selected", t === name ? "true" : "false");
+      $("pane-" + t).hidden = t !== name;
+    });
+    if (name !== "report") stopPicking();
+    if (name === "report" && locMode === "gps" && !pos) getGps();
+  }
+  TABS.forEach(function (t) { $("tab-" + t).addEventListener("click", function () { showTab(t); }); });
+
+  // ---------- mijn locatie ----------
+  function showMe(p) {
+    var ll = [p.coords.latitude, p.coords.longitude];
+    if (!meMarker) {
+      meMarker = L.marker(ll, { icon: L.divIcon({ className: "", html: '<div class="me"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }), zIndexOffset: 2000 }).addTo(map);
+      meCircle = L.circle(ll, { radius: p.coords.accuracy, color: "#1a73e8", weight: 1, fillOpacity: .08 }).addTo(map);
+    } else {
+      meMarker.setLatLng(ll); meCircle.setLatLng(ll); meCircle.setRadius(p.coords.accuracy);
+    }
+  }
+  var watching = false;
+  $("btnMe").addEventListener("click", function () {
+    if (!navigator.geolocation) return;
+    if (!watching) {
+      watching = true;
+      navigator.geolocation.watchPosition(showMe, function () {}, { enableHighAccuracy: true, maximumAge: 10000 });
+    }
+    navigator.geolocation.getCurrentPosition(function (p) {
+      showMe(p);
+      map.setView([p.coords.latitude, p.coords.longitude], Math.max(map.getZoom(), 14));
+    }, function () {
+      $("btnMe").textContent = "Geen locatie";
+      setTimeout(function () { $("btnMe").textContent = "Mijn locatie"; }, 2500);
+    }, { enableHighAccuracy: true, timeout: 15000 });
+  });
+
+  // ---------- hunt melden ----------
+  var selArea = store.get("lastArea", null);
+  var pos = null; // {lat, lon, acc}
+  var locMode = "gps";
+
+  function renderAreaPick() {
+    var w = $("areaPick");
+    w.textContent = "";
+    AREAS.forEach(function (a) {
+      var lab = el("label");
+      var inp = el("input");
+      inp.type = "radio"; inp.name = "area"; inp.value = a; inp.id = "area-" + a.toLowerCase();
+      inp.checked = selArea === a;
+      inp.addEventListener("change", function () { selArea = a; store.set("lastArea", a); validate(); });
+      var i = el("i"); i.style.background = AREA_COLORS[a];
+      lab.appendChild(inp); lab.appendChild(i); lab.appendChild(document.createTextNode(a));
+      w.appendChild(lab);
+    });
+  }
+  renderAreaPick();
+
+  function setNowTime() { var d = new Date(); $("huntTime").value = pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  setNowTime();
+  $("huntBy").value = store.get("by", "");
+  $("huntBy").addEventListener("input", function () { store.set("by", this.value); });
+
+  function setLocText() {
+    var t = $("locText");
+    if (pos) {
+      t.dataset.ok = "1";
+      t.textContent = fmtCoord(pos.lat, pos.lon) + (pos.acc ? "  (±" + Math.round(pos.acc) + " m)" : "  (gekozen op kaart)");
+    } else {
+      t.dataset.ok = "0";
+      t.textContent = locMode === "gps" ? "GPS-locatie ophalen…" : "Tik op de kaart om de plek te kiezen";
+    }
+  }
+  function getGps() {
+    if (!navigator.geolocation) { $("locText").textContent = "Deze browser geeft geen GPS. Kies de plek op de kaart."; return; }
+    pos = null; setLocText();
+    navigator.geolocation.getCurrentPosition(function (p) {
+      if (locMode !== "gps") return;
+      pos = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy };
+      showMe(p);
+      setLocText(); validate();
+    }, function () {
+      $("locText").dataset.ok = "0";
+      $("locText").textContent = "Geen GPS-toestemming. Sta locatie toe of kies de plek op de kaart.";
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 15000 });
+  }
+  function startPicking() {
+    $("maphint").hidden = false;
+    map.getContainer().style.cursor = "crosshair";
+    if (window.innerWidth < 900) $("map").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function stopPicking() {
+    $("maphint").hidden = true;
+    map.getContainer().style.cursor = "";
+  }
+  function setLocMode(m) {
+    locMode = m;
+    $("locGps").setAttribute("aria-pressed", m === "gps" ? "true" : "false");
+    $("locMap").setAttribute("aria-pressed", m === "map" ? "true" : "false");
+    pos = null;
+    if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
+    if (m === "gps") { stopPicking(); getGps(); } else { setLocText(); startPicking(); }
+    validate();
+  }
+  $("locGps").addEventListener("click", function () { setLocMode("gps"); });
+  $("locMap").addEventListener("click", function () { setLocMode("map"); });
+
+  function placePick(ll) {
+    pos = { lat: ll.lat, lon: ll.lng, acc: null };
+    if (!pickMarker) {
+      pickMarker = L.marker(ll, { draggable: true }).addTo(map);
+      pickMarker.on("dragend", function () { var p = pickMarker.getLatLng(); pos = { lat: p.lat, lon: p.lng, acc: null }; setLocText(); });
+    } else pickMarker.setLatLng(ll);
+    setLocText(); validate();
+    stopPicking();
+    if (window.innerWidth < 900) $("pane-report").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  map.on("click", function (e) {
+    if (locMode === "map" && !$("pane-report").hidden) placePick(e.latlng);
+  });
+
+  function validate() {
+    $("btnSubmit").disabled = !(selArea && pos && $("huntTime").value);
+  }
+  $("huntTime").addEventListener("input", validate);
+
+  function alertMsg(text, kind) {
+    var m = $("formMsg"); m.textContent = text; m.dataset.kind = kind || "";
+  }
+
+  $("btnReport").addEventListener("click", function () {
+    showTab("report");
+    setNowTime(); alertMsg("");
+    if (window.innerWidth < 900) $("pane-report").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  $("reportForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if ($("btnSubmit").disabled) return;
+    var parts = $("huntTime").value.split(":");
+    var d = new Date(); d.setHours(+parts[0], +parts[1], 0, 0);
+    if (d.getTime() - Date.now() > 10 * 60000) d.setDate(d.getDate() - 1); // tijd na middernacht ingevuld voor gisteren
+    var h = {
+      v: 1, type: "hunt", id: uid(), area: selArea,
+      lat: +pos.lat.toFixed(6), lon: +pos.lon.toFixed(6),
+      acc: pos.acc ? Math.round(pos.acc) : null,
+      t: d.getTime(),
+      by: $("huntBy").value.trim().slice(0, 40),
+      note: $("huntNote").value.trim().slice(0, 200)
+    };
+    $("btnSubmit").disabled = true;
+    alertMsg("Opslaan…");
+    publish({ topic: topicData, message: JSON.stringify(h), tags: ["hunt"] })
+      .then(function () {
+        hunts[h.id] = h; saveHunts();
+        filterArea = "all"; store.set("filter", "all");
+        renderHunts();
+        var title = "Hunt " + h.area + " om " + hhmm(h.t);
+        var text = (h.by || "Iemand") + " heeft " + h.area + " gehunt" + (h.note ? ": " + h.note : "") + "\nTik om de plek te openen.";
+        var note = { title: title, message: text, tags: ["fox_face"], priority: 4, click: mapsUrl(h.lat, h.lon) };
+        return Promise.all([
+          publish(Object.assign({ topic: topicArea(h.area) }, note)).catch(function () {}),
+          publish(Object.assign({ topic: topicAll }, note)).catch(function () {})
+        ]);
+      })
+      .then(function () {
+        alertMsg("Hunt opgeslagen en gemeld aan de groep.", "ok");
+        $("huntNote").value = "";
+        if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
+        pos = null; setLocText();
+        map.setView([h.lat, h.lon], Math.max(map.getZoom(), 13));
+        setTimeout(function () { showTab("hunts"); }, 1200);
+      })
+      .catch(function (err) {
+        alertMsg("Opslaan mislukt (" + err.message + "). Controleer je internet en probeer opnieuw.", "err");
+        validate();
+      });
+  });
+
+  // ---------- meldingen ----------
+  function renderSubs() {
+    var w = $("subs");
+    w.textContent = "";
+    function row(label, topic, color) {
+      var r = el("div", "sub");
+      var i = el("i"); i.style.background = color; r.appendChild(i);
+      var t = el("div", "t");
+      t.appendChild(el("b", null, label));
+      t.appendChild(el("code", null, topic));
+      r.appendChild(t);
+      var acts = el("div", "acts");
+      var a = el("a", "linkbtn", "Abonneren");
+      a.href = "ntfy://ntfy.sh/" + topic;
+      acts.appendChild(a);
+      var c = el("button", "linkbtn", "Kopieer");
+      c.type = "button";
+      c.addEventListener("click", function () { copy(topic, c); });
+      acts.appendChild(c);
+      r.appendChild(acts);
+      w.appendChild(r);
+    }
+    row("Alle gebieden", topicAll, "var(--fg)");
+    AREAS.forEach(function (a) { row(a, topicArea(a), AREA_COLORS[a]); });
+  }
+  function copy(text, btn) {
+    var done = function () { var o = btn.textContent; btn.textContent = "Gekopieerd"; setTimeout(function () { btn.textContent = o; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+    } else { fallbackCopy(text); done(); }
+  }
+  function fallbackCopy(text) {
+    var t = el("textarea"); t.value = text; document.body.appendChild(t); t.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    t.remove();
+  }
+  renderSubs();
+  var share = location.href.split("#")[0] + "#" + code;
+  $("shareUrl").value = share;
+  $("btnCopy").addEventListener("click", function () { copy(share, $("btnCopy")); });
+})();
+</script>
+</body>
+</html>
