@@ -113,6 +113,46 @@ a { color: var(--accent); }
   opacity: .8;
   margin-left: 6px;
 }
+.who {
+  border: 1px solid color-mix(in srgb, var(--accent-fg) 45%, transparent);
+  background: transparent;
+  color: var(--accent-fg);
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: .85rem;
+  font-weight: 600;
+  max-width: 42vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dlg {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(10, 14, 12, .55);
+  display: grid;
+  place-items: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.dlgbox {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  color: var(--fg);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.35);
+}
+.dlgbox h2 { margin: 0; font-family: var(--font-display); font-size: 1.6rem; }
+.dlgbox p { margin: 0; }
+.dist { font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) {
+  .conn span { display: none; }
+  .brand small { display: none; }
+}
 .conn {
   margin-left: auto;
   display: flex;
@@ -615,6 +655,7 @@ textarea { min-height: 70px; resize: vertical; }
   <header class="top">
     <h1 class="brand">Vossenkaart<small>Jotihunt</small></h1>
     <div class="conn" id="conn" title="Verbinding met het huntkanaal"><i></i><span id="connText">Verbinden…</span></div>
+    <button type="button" class="who" id="btnName" title="Je naam aanpassen">Naam instellen</button>
   </header>
 
   <section class="status" id="status" aria-label="Status per deelgebied"></section>
@@ -640,6 +681,7 @@ textarea { min-height: 70px; resize: vertical; }
       <div class="tabs" role="tablist">
         <button type="button" role="tab" id="tab-hunts" aria-controls="pane-hunts" aria-selected="true">Hunts<span class="count" id="huntCount">0</span></button>
         <button type="button" role="tab" id="tab-report" aria-controls="pane-report" aria-selected="false">Melden</button>
+        <button type="button" role="tab" id="tab-team" aria-controls="pane-team" aria-selected="false">Team<span class="count" id="teamTabCount" hidden></span></button>
         <button type="button" role="tab" id="tab-notify" aria-controls="pane-notify" aria-selected="false">Meldingen</button>
       </div>
 
@@ -687,6 +729,16 @@ textarea { min-height: 70px; resize: vertical; }
         </form>
       </section>
 
+      <section class="tabpane" id="pane-team" role="tabpanel" aria-labelledby="tab-team" hidden>
+        <div class="row">
+          <button type="button" class="btn ghost" id="btnShare2">Deel mijn locatie</button>
+          <button type="button" class="btn ghost" id="btnName2">Naam wijzigen</button>
+        </div>
+        <ul class="hunts" id="teamList"></ul>
+        <div class="empty" id="teamEmpty">Nog niemand deelt zijn locatie. Tik op <b>Deel mijn locatie</b>; je groep ziet je dan op de kaart en in deze lijst.</div>
+        <p class="small muted">Je ziet alleen wie zelf zijn locatie deelt, zolang de Vossenkaart bij die persoon open staat. Locaties ouder dan een uur verdwijnen.</p>
+      </section>
+
       <section class="tabpane" id="pane-notify" role="tabpanel" aria-labelledby="tab-notify" hidden>
         <p class="label">Zo krijg je meldingen</p>
         <ol class="steps">
@@ -706,6 +758,21 @@ textarea { min-height: 70px; resize: vertical; }
       </section>
     </aside>
   </div>
+</div>
+
+<div class="dlg" id="nameDlg" hidden role="dialog" aria-modal="true" aria-labelledby="nameDlgTitle">
+  <form class="dlgbox form" id="nameForm">
+    <h2 id="nameDlgTitle">Hoe heet je?</h2>
+    <p class="small muted">Je groep ziet deze naam bij je hunts en, als je hem deelt, bij je locatie op de kaart. Tip: zet je auto of rol erbij.</p>
+    <div class="field">
+      <label for="nameInput">Naam</label>
+      <input type="text" id="nameInput" maxlength="30" autocomplete="nickname" placeholder="bijv. Sanne – auto 3" required>
+    </div>
+    <div class="row">
+      <button class="btn ghost" type="button" id="nameLater">Later</button>
+      <button class="btn" type="submit">Opslaan</button>
+    </div>
+  </form>
 </div>
 
 <div class="setup" id="setup" hidden>
@@ -1210,7 +1277,7 @@ textarea { min-height: 70px; resize: vertical; }
   });
 
   // ---------- tabbladen ----------
-  var TABS = ["hunts", "report", "notify"];
+  var TABS = ["hunts", "report", "team", "notify"];
   function showTab(name) {
     TABS.forEach(function (t) {
       $("tab-" + t).setAttribute("aria-selected", t === name ? "true" : "false");
@@ -1307,6 +1374,52 @@ textarea { min-height: 70px; resize: vertical; }
   function updateTeamCount() {
     var n = Object.keys(team).filter(function (id) { return team[id].marker; }).length;
     $("teamCount").textContent = n ? String(n) : "";
+    $("teamTabCount").textContent = String(n);
+    $("teamTabCount").hidden = !n;
+    renderTeamList();
+  }
+  function myLatLng() {
+    if (lastPos) return L.latLng(lastPos.lat, lastPos.lon);
+    return meMarker ? meMarker.getLatLng() : null;
+  }
+  function renderTeamList() {
+    var ul = $("teamList");
+    ul.textContent = "";
+    var me = myLatLng();
+    var ids = Object.keys(team).filter(function (id) { return team[id].marker; })
+      .sort(function (a, b) { return team[a].n.localeCompare(team[b].n, "nl"); });
+    $("teamEmpty").hidden = ids.length > 0;
+    ids.forEach(function (id) {
+      var m = team[id];
+      var li = el("li", "hunt");
+      var bd = el("div", "badge", initials(m.n));
+      bd.style.background = "#1f2a37";
+      bd.style.fontSize = ".95rem";
+      if (Date.now() - m.t > TEAM_STALE) bd.style.opacity = ".5";
+      li.appendChild(bd);
+      var body = el("div", "body");
+      var head = el("div", "head");
+      head.appendChild(el("b", null, m.n));
+      head.appendChild(el("span", "time", ageTxt(m.t) === "nu" ? "nu" : ageTxt(m.t) + " geleden"));
+      body.appendChild(head);
+      if (me) body.appendChild(el("div", "small dist", fmtKm(me.distanceTo([m.lat, m.lon])) + " van jou"));
+      li.appendChild(body);
+      var acts = el("div", "acts");
+      var show = el("button", "linkbtn", "Toon");
+      show.type = "button";
+      show.addEventListener("click", function () {
+        if (!teamShown) setTeamShown(true);
+        map.setView([m.lat, m.lon], Math.max(map.getZoom(), 14));
+        if (m.marker) m.marker.openPopup();
+        if (window.innerWidth < 900) $("map").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      acts.appendChild(show);
+      var nav = el("a", "linkbtn", "Navigeer");
+      nav.href = navUrl(m.lat, m.lon); nav.target = "_blank"; nav.rel = "noopener";
+      acts.appendChild(nav);
+      li.appendChild(acts);
+      ul.appendChild(li);
+    });
   }
   function removeMember(id) {
     if (team[id] && team[id].marker) teamLayer.removeLayer(team[id].marker);
@@ -1349,7 +1462,42 @@ textarea { min-height: 70px; resize: vertical; }
   function publishTo(c, payload) {
     if (c.connected) c.publish(teamBase + deviceId, payload, { qos: 0, retain: true });
   }
-  function myName() { return $("huntBy").value.trim().slice(0, 30); }
+  // ---------- eigen naam (per telefoon) ----------
+  function getName() { return String(store.get("name", "") || "").trim().slice(0, 30); }
+  function myName() { return getName(); }
+  var afterName = null;
+  function renderName() {
+    var n = getName();
+    $("btnName").textContent = n || "Naam instellen";
+    if (n && !$("huntBy").value.trim()) $("huntBy").value = n;
+  }
+  function openNameDlg(then) {
+    afterName = then || null;
+    $("nameInput").value = getName();
+    $("nameDlg").hidden = false;
+    setTimeout(function () { $("nameInput").focus(); }, 50);
+  }
+  function closeNameDlg() { $("nameDlg").hidden = true; afterName = null; }
+  $("nameForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var n = $("nameInput").value.trim().replace(/\s+/g, " ").slice(0, 30);
+    if (!n) { $("nameInput").focus(); return; }
+    var old = getName();
+    store.set("name", n);
+    if (!$("huntBy").value.trim() || $("huntBy").value.trim() === old) { $("huntBy").value = n; store.set("by", n); }
+    renderName();
+    var then = afterName;
+    closeNameDlg();
+    if (sharing && lastPos) sendPos(lastPos);
+    if (then) then();
+  });
+  $("nameLater").addEventListener("click", closeNameDlg);
+  $("nameDlg").addEventListener("click", function (e) { if (e.target === this) closeNameDlg(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("nameDlg").hidden) closeNameDlg(); });
+  $("btnName").addEventListener("click", function () { openNameDlg(); });
+  $("btnName2").addEventListener("click", function () { openNameDlg(); });
+  if (!getName() && store.get("by", "")) store.set("name", String(store.get("by", "")).slice(0, 30));
+
   var sentMeta = null; // {t, lat, lon} van het laatst verstuurde bericht
   function sendPos(p) {
     lastPos = p;
@@ -1376,10 +1524,7 @@ textarea { min-height: 70px; resize: vertical; }
   }
   function setSharing(on) {
     if (on && !myName()) {
-      showTab("report");
-      if (window.innerWidth < 900) $("pane-report").scrollIntoView({ behavior: "smooth", block: "start" });
-      $("huntBy").focus();
-      alertMsg("Vul eerst je naam in bij 'Wie' en tik daarna opnieuw op Deel mijn locatie.", "err");
+      openNameDlg(function () { setSharing(true); });
       return;
     }
     if (on && !navigator.geolocation) return;
@@ -1387,6 +1532,7 @@ textarea { min-height: 70px; resize: vertical; }
     store.set("sharing", on);
     $("btnShare").setAttribute("aria-pressed", on ? "true" : "false");
     $("btnShare").textContent = on ? "Locatie wordt gedeeld" : "Deel mijn locatie";
+    $("btnShare2").textContent = on ? "Stop met delen" : "Deel mijn locatie";
     if (on) {
       shareWatch = navigator.geolocation.watchPosition(onSharePos, function () {
         setSharing(false);
@@ -1407,6 +1553,7 @@ textarea { min-height: 70px; resize: vertical; }
     }
   }
   $("btnShare").addEventListener("click", function () { setSharing(!sharing); });
+  $("btnShare2").addEventListener("click", function () { setSharing(!sharing); });
   // stilstaan: elke minuut opnieuw versturen zodat de groep ziet dat je er nog bent
   setInterval(function () { if (sharing && lastPos) sendPos(lastPos); }, 60000);
   // namen/leeftijden bijwerken
@@ -1457,7 +1604,9 @@ textarea { min-height: 70px; resize: vertical; }
 
   function setNowTime() { var d = new Date(); $("huntTime").value = pad(d.getHours()) + ":" + pad(d.getMinutes()); }
   setNowTime();
-  $("huntBy").value = store.get("by", "");
+  $("huntBy").value = store.get("by", "") || getName();
+  renderName();
+  if (!getName()) setTimeout(function () { if ($("nameDlg").hidden) openNameDlg(); }, 700);
   $("huntBy").addEventListener("input", function () { store.set("by", this.value); });
 
   function setLocText() {
