@@ -66,6 +66,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body {
   margin: 0;
@@ -153,7 +154,9 @@ a { color: var(--accent); }
   min-width: 96px;
 }
 .chip .dot {
-  grid-row: span 2;
+  grid-row: span 3;
+  align-self: start;
+  margin-top: 3px;
   width: 14px; height: 14px; border-radius: 50%;
   background: var(--st-unknown);
 }
@@ -173,6 +176,16 @@ a { color: var(--accent); }
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.chip .cd {
+  font-size: .8rem;
+  font-weight: 600;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.cd[data-state="wait"] { color: var(--st-orange); }
+.cd[data-state="ready"] { color: var(--st-green); }
 .chip.flash { animation: flash 1.2s ease-out 3; }
 @keyframes flash { 0% { background: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); } 100% { background: var(--surface-2); } }
 
@@ -213,10 +226,39 @@ a { color: var(--accent); }
   letter-spacing: .03em;
   padding: 10px 16px;
 }
+.maplayers {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 500;
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: 0 1px 4px rgba(0,0,0,.18);
+}
+.maplayers button {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 9px;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent);
+}
+.maplayers button[aria-pressed="true"] {
+  background: var(--fg);
+  color: var(--bg);
+  text-decoration: none;
+}
 .maphint {
   position: absolute;
   left: 50%;
-  top: 10px;
+  top: 52px;
   transform: translateX(-50%);
   z-index: 500;
   background: var(--fg);
@@ -334,6 +376,20 @@ a { color: var(--accent); }
 .hunt .head b { font-family: var(--font-display); font-size: 1.15rem; letter-spacing: .02em; }
 .hunt .time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .85rem; }
 .hunt .note { margin-top: 2px; overflow-wrap: anywhere; }
+.hcode {
+  display: inline-block;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-weight: 600;
+  font-size: .85rem;
+  letter-spacing: .04em;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-2);
+  overflow-wrap: anywhere;
+}
+.areas .cd { margin-left: auto; font-size: .75rem; }
+#huntCode { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .04em; text-transform: uppercase; }
 .hunt .acts { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
 .linkbtn {
   border: 0; background: none; padding: 2px 0;
@@ -453,9 +509,46 @@ textarea { min-height: 70px; resize: vertical; }
 }
 .hm.fresh { width: 36px; height: 36px; font-size: 18px; animation: pulse 2s ease-out infinite; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0,0,0,.45); } 70% { box-shadow: 0 0 0 14px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
+.leaflet-glow-pane { opacity: .32; }
+.alabel {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font: 700 15px/1 var(--font-display);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 6px #fff;
+  pointer-events: none;
+  opacity: .9;
+}
+.arrow { width: 20px; height: 20px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
+.arrow svg { display: block; }
+.htime {
+  background: rgba(255,255,255,.92);
+  color: #1c231f;
+  border: 0;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font: 600 11px/1.3 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.htime::before { display: none; }
 .me { width: 16px; height: 16px; border-radius: 50%; background: #1a73e8; border: 3px solid #fff; box-shadow: 0 0 0 2px rgba(26,115,232,.35); }
 .leaflet-popup-content { font: 14px/1.4 var(--font-body); }
 .leaflet-popup-content b { font-family: var(--font-display); font-size: 1.05rem; }
+.leaflet-popup-content .muted { color: #5b675f; }
+.navbtn {
+  display: block;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #1f5f45;
+  color: #fff !important;
+  text-align: center;
+  font-weight: 600;
+  text-decoration: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .hm.fresh, .chip.flash { animation: none; }
@@ -486,8 +579,12 @@ textarea { min-height: 70px; resize: vertical; }
       <div class="maphint" id="maphint" hidden>Tik op de kaart waar de hunt was</div>
       <div class="mapbtn">
         <button type="button" id="btnMe">Mijn locatie</button>
-        <button type="button" id="btnGroups" aria-pressed="true">Groepen</button>
         <button type="button" class="primary" id="btnReport">+ Hunt melden</button>
+      </div>
+      <div class="maplayers" role="group" aria-label="Kaartlagen">
+        <button type="button" id="btnAreas" aria-pressed="true">Gebieden</button>
+        <button type="button" id="btnGroups" aria-pressed="true">Groepen</button>
+        <button type="button" id="btnRoutes" aria-pressed="true">Routes</button>
       </div>
     </div>
 
@@ -509,6 +606,11 @@ textarea { min-height: 70px; resize: vertical; }
           <div class="field">
             <span class="label">Deelgebied</span>
             <div class="areas" id="areaPick" role="radiogroup" aria-label="Deelgebied"></div>
+            <div class="msg" id="areaWarn" data-kind="err" hidden></div>
+          </div>
+          <div class="field">
+            <label for="huntCode">Huntcode</label>
+            <input type="text" id="huntCode" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="code van de vos">
           </div>
           <div class="field">
             <span class="label">Locatie</span>
@@ -585,6 +687,7 @@ textarea { min-height: 70px; resize: vertical; }
   var API = "https://jotihunt.nl/api/2.0";
   var NTFY = "https://ntfy.sh";
   var CODE_RE = /^[A-Za-z0-9_-]{6,64}$/;
+  var HUNT_INTERVAL = 60 * 60000; // een vos mag 1x per uur gehunt worden
 
   // ---------- opslag (alleen gemak per apparaat) ----------
   var store = {
@@ -646,7 +749,46 @@ textarea { min-height: 70px; resize: vertical; }
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   }
   function mapsUrl(lat, lon) { return "https://www.google.com/maps/search/?api=1&query=" + lat.toFixed(6) + "," + lon.toFixed(6); }
+  function navUrl(lat, lon) { return "https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=" + lat.toFixed(6) + "," + lon.toFixed(6); }
+  function navLink(lat, lon, label) {
+    var a = el("a", "navbtn", label || "Navigeer hierheen");
+    a.href = navUrl(lat, lon); a.target = "_blank"; a.rel = "noopener";
+    return a;
+  }
   function fmtCoord(lat, lon) { return lat.toFixed(5) + ", " + lon.toFixed(5); }
+  function mmss(ms) {
+    var s = Math.max(0, Math.ceil(ms / 1000));
+    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+    return (h ? h + ":" + pad(m) : m) + ":" + pad(r);
+  }
+
+  // ---------- aftellen: een vos mag 1x per uur gehunt worden ----------
+  function lastHuntAt(area) {
+    var t = 0;
+    if (!hunts) return 0;
+    Object.keys(hunts).forEach(function (k) {
+      var h = hunts[k];
+      if (h.area === area && !deleted[h.id] && h.t > t) t = h.t;
+    });
+    return t;
+  }
+  function nextAllowed(area) { var t = lastHuntAt(area); return t ? t + HUNT_INTERVAL : 0; }
+  function updateCountdowns() {
+    var now = Date.now();
+    var els = document.querySelectorAll(".cd[data-area]");
+    for (var i = 0; i < els.length; i++) {
+      var e = els[i], area = e.getAttribute("data-area"), next = nextAllowed(area), short = e.hasAttribute("data-short");
+      if (!next) { e.dataset.state = "none"; e.textContent = short ? "" : "Nog niet gehunt"; }
+      else if (next > now) { e.dataset.state = "wait"; e.textContent = (short ? "" : "Weer om " + hhmm(next) + " · ") + mmss(next - now); }
+      else { e.dataset.state = "ready"; e.textContent = short ? "mag" : "Mag weer gehunt"; }
+    }
+    var w = $("areaWarn");
+    if (w) {
+      var n = selArea ? nextAllowed(selArea) : 0;
+      if (n > now) { w.hidden = false; w.textContent = selArea + " is nog niet weer huntbaar: nog " + mmss(n - now) + " (vanaf " + hhmm(n) + ")."; }
+      else w.hidden = true;
+    }
+  }
 
   // ---------- kaart ----------
   var map = L.map("map", { zoomControl: true }).setView([52.07, 5.95], 9);
@@ -654,9 +796,70 @@ textarea { min-height: 70px; resize: vertical; }
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
+  // Gloed per deelgebied: zachte ringen rond de groepen in de kleur van het gebied.
+  // Eigen laag onder de rest, met één doorzichtigheid voor de hele laag (zo stapelt overlap niet op).
+  map.createPane("glow");
+  map.getPane("glow").style.zIndex = 300;
+  map.getPane("glow").style.pointerEvents = "none";
+  var glowRenderer = L.canvas({ pane: "glow", padding: 0.3 });
+  map.createPane("labels");
+  map.getPane("labels").style.zIndex = 350;
+  map.getPane("labels").style.pointerEvents = "none";
+  var glowLayer = L.layerGroup();
+  var labelLayer = L.layerGroup();
   var groupLayer = L.layerGroup().addTo(map);
+  var routeLayer = L.layerGroup().addTo(map);
   var huntLayer = L.layerGroup().addTo(map);
   var meMarker = null, meCircle = null, pickMarker = null;
+
+  // Looproutes: per gebied een lijn van hunt naar hunt (op volgorde van tijd) met richtingspijlen
+  var routesShown = store.get("routes", true);
+  function setRoutesShown(v) {
+    routesShown = v;
+    store.set("routes", v);
+    $("btnRoutes").setAttribute("aria-pressed", v ? "true" : "false");
+    if (v) routeLayer.addTo(map); else map.removeLayer(routeLayer);
+  }
+  setRoutesShown(routesShown);
+  $("btnRoutes").addEventListener("click", function () { setRoutesShown(!routesShown); });
+
+  function bearingDeg(a, b) {
+    // hoek op het scherm (Mercator is hoekgetrouw, dus gelijk op elk zoomniveau)
+    var p1 = map.options.crs.latLngToPoint(L.latLng(a.lat, a.lon), 10);
+    var p2 = map.options.crs.latLngToPoint(L.latLng(b.lat, b.lon), 10);
+    return Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+  }
+  function fmtKm(m) { return m < 1000 ? Math.round(m) + " m" : (m / 1000).toFixed(1).replace(".", ",") + " km"; }
+  function renderRoutes(list) {
+    routeLayer.clearLayers();
+    var byArea = {};
+    list.forEach(function (h) { (byArea[h.area] = byArea[h.area] || []).push(h); });
+    Object.keys(byArea).forEach(function (area) {
+      var hs = byArea[area].sort(function (a, b) { return a.t - b.t; });
+      var col = AREA_COLORS[area];
+      for (var i = 0; i < hs.length - 1; i++) {
+        var a = hs[i], b = hs[i + 1];
+        var dist = map.distance([a.lat, a.lon], [b.lat, b.lon]);
+        var mins = Math.round((b.t - a.t) / 60000);
+        var line = L.polyline([[a.lat, a.lon], [b.lat, b.lon]], { color: col, weight: 4, opacity: .85, dashArray: "8 7", lineCap: "round" });
+        line.bindTooltip(area + " " + hhmm(a.t) + " → " + hhmm(b.t) + " · " + fmtKm(dist) + " in " + mins + " min", { sticky: true });
+        line.addTo(routeLayer);
+        // pijl halverwege, wijst van de oudere naar de nieuwere hunt
+        var mid = [(a.lat + b.lat) / 2, (a.lon + b.lon) / 2];
+        var arrow = L.marker(mid, {
+          interactive: false,
+          keyboard: false,
+          icon: L.divIcon({
+            className: "",
+            html: '<div class="arrow" style="transform:rotate(' + bearingDeg(a, b).toFixed(1) + 'deg)"><svg viewBox="0 0 20 20" width="20" height="20"><path d="M3 3 L17 10 L3 17 L7 10 Z" fill="' + col + '" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          })
+        });
+        arrow.addTo(routeLayer);
+      }
+    });
+  }
 
   // ---------- status per deelgebied ----------
   var lastStatus = {};
@@ -672,11 +875,14 @@ textarea { min-height: 70px; resize: vertical; }
       var since = a.updated_at ? new Date(a.updated_at) : null;
       var sinceTxt = since ? (dayLabel(since) + hhmm(since)) : "";
       c.appendChild(el("span", null, (STATUS_LABEL[a.status] || a.status) + (sinceTxt ? " · " + sinceTxt : "")));
+      var cd = el("em", "cd"); cd.setAttribute("data-area", a.name);
+      c.appendChild(cd);
       c.title = a.name + ": " + (STATUS_LABEL[a.status] || a.status);
       if (!first && lastStatus[a.name] && lastStatus[a.name] !== a.status) c.classList.add("flash");
       lastStatus[a.name] = a.status;
       wrap.appendChild(c);
     });
+    updateCountdowns();
   }
   function loadStatus() {
     fetch(API + "/areas", { cache: "no-store" })
@@ -706,16 +912,55 @@ textarea { min-height: 70px; resize: vertical; }
         var lat = parseFloat(g.lat), lon = parseFloat(g.long);
         if (!isFinite(lat) || !isFinite(lon)) return;
         var col = AREA_COLORS[g.area] || "#5b6470";
-        var m = L.circleMarker([lat, lon], { radius: 5, color: "#fff", weight: 1.5, fillColor: col, fillOpacity: .85 });
+        var m = L.circleMarker([lat, lon], { radius: 7, color: "#fff", weight: 2, fillColor: col, fillOpacity: .85 });
         var p = el("div");
         p.appendChild(el("b", null, g.name));
         p.appendChild(el("div", null, (g.accomodation ? g.accomodation + ", " : "") + (g.city || "")));
+        p.appendChild(el("div", null, [g.street, g.housenumber, g.housenumber_addition].filter(Boolean).join(" ")));
         p.appendChild(el("div", "muted", "Deelgebied " + g.area));
+        p.appendChild(navLink(lat, lon));
         m.bindPopup(p);
         m.addTo(groupLayer);
       });
+      renderGlow(j.data || []);
     })
     .catch(function () {});
+
+  var GLOW_RINGS = [[9000, .35], [6500, .6], [4000, 1]]; // [straal in m, sterkte]
+  function renderGlow(groups) {
+    glowLayer.clearLayers();
+    labelLayer.clearLayers();
+    var sum = {};
+    GLOW_RINGS.forEach(function (ring) {
+      groups.forEach(function (g) {
+        var lat = parseFloat(g.lat), lon = parseFloat(g.long), col = AREA_COLORS[g.area];
+        if (!isFinite(lat) || !isFinite(lon) || !col) return;
+        L.circle([lat, lon], { radius: ring[0], renderer: glowRenderer, stroke: false, fillColor: col, fillOpacity: ring[1], interactive: false }).addTo(glowLayer);
+      });
+    });
+    groups.forEach(function (g) {
+      var lat = parseFloat(g.lat), lon = parseFloat(g.long);
+      if (!isFinite(lat) || !isFinite(lon) || !AREA_COLORS[g.area]) return;
+      var s = sum[g.area] = sum[g.area] || { lat: 0, lon: 0, n: 0 };
+      s.lat += lat; s.lon += lon; s.n++;
+    });
+    Object.keys(sum).forEach(function (area) {
+      var s = sum[area];
+      L.marker([s.lat / s.n, s.lon / s.n], {
+        interactive: false, keyboard: false, pane: "labels",
+        icon: L.divIcon({ className: "", html: '<div class="alabel" style="color:' + AREA_COLORS[area] + '">' + area + "</div>", iconSize: [0, 0] })
+      }).addTo(labelLayer);
+    });
+  }
+  var areasShown = store.get("areas", true);
+  function setAreasShown(v) {
+    areasShown = v;
+    store.set("areas", v);
+    $("btnAreas").setAttribute("aria-pressed", v ? "true" : "false");
+    if (v) { glowLayer.addTo(map); labelLayer.addTo(map); } else { map.removeLayer(glowLayer); map.removeLayer(labelLayer); }
+  }
+  setAreasShown(areasShown);
+  $("btnAreas").addEventListener("click", function () { setAreasShown(!areasShown); });
 
   // ---------- hunts ----------
   var hunts = store.get("hunts:" + code, {});
@@ -741,6 +986,7 @@ textarea { min-height: 70px; resize: vertical; }
         acc: isFinite(d.acc) ? Math.round(d.acc) : null,
         t: isFinite(d.t) ? +d.t : m.time * 1000,
         by: String(d.by || "").slice(0, 40),
+        huntcode: String(d.huntcode || "").slice(0, 40),
         note: String(d.note || "").slice(0, 200)
       };
       return true;
@@ -781,6 +1027,7 @@ textarea { min-height: 70px; resize: vertical; }
   var markers = {};
   function renderHunts() {
     renderFilter();
+    updateCountdowns();
     var list = visibleHunts();
     var ul = $("huntList");
     ul.textContent = "";
@@ -789,6 +1036,7 @@ textarea { min-height: 70px; resize: vertical; }
 
     huntLayer.clearLayers();
     markers = {};
+    renderRoutes(list);
     list.slice().reverse().forEach(function (h) {
       var age = Date.now() - h.t;
       var fresh = age < 3600000;
@@ -803,12 +1051,12 @@ textarea { min-height: 70px; resize: vertical; }
       var p = el("div");
       p.appendChild(el("b", null, "Hunt " + h.area));
       p.appendChild(el("div", null, dayLabel(h.t) + hhmm(h.t) + " · " + ago(h.t)));
+      if (h.huntcode) { var pc = el("div"); pc.appendChild(el("span", "hcode", h.huntcode)); p.appendChild(pc); }
       if (h.by) p.appendChild(el("div", null, h.by));
       if (h.note) p.appendChild(el("div", "muted", h.note));
-      var a = el("a", null, "Route in Google Maps");
-      a.href = mapsUrl(h.lat, h.lon); a.target = "_blank"; a.rel = "noopener";
-      p.appendChild(a);
+      p.appendChild(navLink(h.lat, h.lon));
       mk.bindPopup(p);
+      mk.bindTooltip(dayLabel(h.t) + hhmm(h.t), { permanent: true, direction: "right", offset: [fresh ? 16 : 13, 0], className: "htime" });
       mk.addTo(huntLayer);
       markers[h.id] = mk;
     });
@@ -822,6 +1070,7 @@ textarea { min-height: 70px; resize: vertical; }
       var head = el("div", "head");
       head.appendChild(el("b", null, h.area));
       head.appendChild(el("span", "time", dayLabel(h.t) + hhmm(h.t) + " · " + ago(h.t)));
+      if (h.huntcode) head.appendChild(el("span", "hcode", h.huntcode));
       body.appendChild(head);
       if (h.by) body.appendChild(el("div", "small", h.by));
       if (h.note) body.appendChild(el("div", "note small muted", h.note));
@@ -836,7 +1085,7 @@ textarea { min-height: 70px; resize: vertical; }
       });
       acts.appendChild(show);
       var route = el("a", "linkbtn", "Route");
-      route.href = mapsUrl(h.lat, h.lon); route.target = "_blank"; route.rel = "noopener";
+      route.href = navUrl(h.lat, h.lon); route.target = "_blank"; route.rel = "noopener";
       acts.appendChild(route);
       var del = el("button", "linkbtn danger", confirmId === h.id ? "Zeker wissen?" : "Wissen");
       del.type = "button";
@@ -861,34 +1110,54 @@ textarea { min-height: 70px; resize: vertical; }
     return fetch(NTFY + "/", { method: "POST", body: JSON.stringify(obj) })
       .then(function (r) { if (!r.ok) throw new Error("ntfy " + r.status); return r.json(); });
   }
-  function loadHistory() {
-    return fetch(NTFY + "/" + topicData + "/json?poll=1&since=all")
-      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+  // Haalt berichten op (alles, of alleen nieuwe sinds lastId). Breekt af na 15 s.
+  function poll(all) {
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 15000);
+    var since = all || !lastId ? "all" : encodeURIComponent(lastId);
+    return fetch(NTFY + "/" + topicData + "/json?poll=1&since=" + since, { cache: "no-store", signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { if (!r.ok) throw new Error("ntfy " + r.status); return r.text(); })
       .then(function (txt) {
+        clearTimeout(timer);
+        var changed = false;
         txt.split("\n").forEach(function (line) {
           if (!line.trim()) return;
-          try { handleMessage(JSON.parse(line)); } catch (e) {}
+          try { if (handleMessage(JSON.parse(line))) changed = true; } catch (e) {}
         });
         saveHunts();
-        renderHunts();
-      });
+        if (changed || all) renderHunts();
+      }, function (err) { clearTimeout(timer); throw err; });
   }
-  var es = null;
+
+  // Live-verbinding (SSE). Lukt die niet (bijv. bedrijfsnetwerk), dan valt de pagina terug op elke 20 s ophalen.
+  var es = null, liveOpen = false;
   function openLive() {
+    if (!window.EventSource) return;
     if (es) es.close();
     es = new EventSource(NTFY + "/" + topicData + "/sse" + (lastId ? "?since=" + encodeURIComponent(lastId) : ""));
-    es.onopen = function () { setConn(true, "Live"); };
-    es.onerror = function () { setConn(false, "Opnieuw verbinden…"); };
+    es.onopen = function () { liveOpen = true; setConn(true, "Live"); };
+    es.onerror = function () { liveOpen = false; };
     es.onmessage = function (e) {
       var m; try { m = JSON.parse(e.data); } catch (x) { return; }
       if (handleMessage(m)) { saveHunts(); renderHunts(); }
     };
   }
+  function pollTick() {
+    if (liveOpen) return;
+    poll(false)
+      .then(function () { setConn(true, "Verbonden (elke 20 s)"); })
+      .catch(function () { setConn(false, "Geen verbinding met ntfy.sh"); });
+  }
+
   renderHunts();
-  loadHistory().catch(function () { setConn(false, "Geen verbinding"); }).then(openLive);
+  poll(true)
+    .then(function () { if (!liveOpen) setConn(true, "Verbonden"); })
+    .catch(function () { setConn(false, "Geen verbinding met ntfy.sh"); })
+    .then(openLive);
+  setInterval(pollTick, 20000);
   setInterval(renderHunts, 60000); // "x min geleden" bijwerken
   document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible") { loadStatus(); loadHistory().catch(function () {}); }
+    if (document.visibilityState === "visible") { loadStatus(); poll(false).catch(function () {}); }
   });
 
   // ---------- tabbladen ----------
@@ -942,13 +1211,17 @@ textarea { min-height: 70px; resize: vertical; }
       var inp = el("input");
       inp.type = "radio"; inp.name = "area"; inp.value = a; inp.id = "area-" + a.toLowerCase();
       inp.checked = selArea === a;
-      inp.addEventListener("change", function () { selArea = a; store.set("lastArea", a); validate(); });
+      inp.addEventListener("change", function () { selArea = a; store.set("lastArea", a); validate(); updateCountdowns(); });
       var i = el("i"); i.style.background = AREA_COLORS[a];
       lab.appendChild(inp); lab.appendChild(i); lab.appendChild(document.createTextNode(a));
+      var cd = el("em", "cd"); cd.setAttribute("data-area", a); cd.setAttribute("data-short", "");
+      lab.appendChild(cd);
       w.appendChild(lab);
     });
   }
   renderAreaPick();
+  updateCountdowns();
+  setInterval(updateCountdowns, 1000);
 
   function setNowTime() { var d = new Date(); $("huntTime").value = pad(d.getHours()) + ":" + pad(d.getMinutes()); }
   setNowTime();
@@ -1040,6 +1313,7 @@ textarea { min-height: 70px; resize: vertical; }
       acc: pos.acc ? Math.round(pos.acc) : null,
       t: d.getTime(),
       by: $("huntBy").value.trim().slice(0, 40),
+      huntcode: $("huntCode").value.trim().toUpperCase().slice(0, 40),
       note: $("huntNote").value.trim().slice(0, 200)
     };
     $("btnSubmit").disabled = true;
@@ -1050,16 +1324,28 @@ textarea { min-height: 70px; resize: vertical; }
         filterArea = "all"; store.set("filter", "all");
         renderHunts();
         var title = "Hunt " + h.area + " om " + hhmm(h.t);
-        var text = (h.by || "Iemand") + " heeft " + h.area + " gehunt" + (h.note ? ": " + h.note : "") + "\nTik om de plek te openen.";
+        var next = h.t + HUNT_INTERVAL;
+        var text = (h.by || "Iemand") + " heeft " + h.area + " gehunt" + (h.note ? ": " + h.note : "") +
+          (h.huntcode ? "\nHuntcode: " + h.huntcode : "") +
+          "\nWeer huntbaar om " + hhmm(next) + ". Tik om de plek te openen.";
         var note = { title: title, message: text, tags: ["fox_face"], priority: 4, click: mapsUrl(h.lat, h.lon) };
-        return Promise.all([
+        var sends = [
           publish(Object.assign({ topic: topicArea(h.area) }, note)).catch(function () {}),
           publish(Object.assign({ topic: topicAll }, note)).catch(function () {})
-        ]);
+        ];
+        // Geplande melding (ntfy stuurt hem zelf op het juiste moment): vos mag weer gehunt worden
+        var delaySec = Math.round((next - Date.now()) / 1000);
+        if (delaySec >= 30) {
+          var again = { title: h.area + " mag weer gehunt worden", message: "Het uur na de hunt van " + hhmm(h.t) + " is voorbij.", tags: ["alarm_clock"], priority: 4, delay: delaySec + "s" };
+          sends.push(publish(Object.assign({ topic: topicArea(h.area) }, again)).catch(function () {}));
+          sends.push(publish(Object.assign({ topic: topicAll }, again)).catch(function () {}));
+        }
+        return Promise.all(sends);
       })
       .then(function () {
         alertMsg("Hunt opgeslagen en gemeld aan de groep.", "ok");
         $("huntNote").value = "";
+        $("huntCode").value = "";
         if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
         pos = null; setLocText();
         map.setView([h.lat, h.lon], Math.max(map.getZoom(), 13));
