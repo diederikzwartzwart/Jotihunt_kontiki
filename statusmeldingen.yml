@@ -1,0 +1,126 @@
+# Jotihunt statusmeldingen via GitHub, zonder dat er een pc aan hoeft te staan.
+#
+# Elke taak draait bijna 6 uur en checkt elke 30 seconden https://jotihunt.nl/api/2.0/areas.
+# Wisselt een deelgebied van status, dan gaat er één pushmelding via ntfy.sh naar
+# <groepscode>-<gebied> (bijv. <groepscode>-alpha).
+# Elk uur wordt er een nieuwe taak ingepland; die wacht tot de lopende klaar is en neemt het dan over.
+#
+# Secrets (Settings > Secrets and variables > Actions):
+#   NTFY_TOPIC  verplicht: jullie groepscode (bijv. jotihunt-...)
+#   NTFY_TOKEN  optioneel: toegangstoken van een betaald ntfy-account (meer berichten per dag)
+# Na de Jotihunt: Actions > Statusmeldingen > ... > Disable workflow.
+
+name: Statusmeldingen
+
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Alleen een testmelding sturen"
+        type: boolean
+        default: false
+
+concurrency:
+  group: statusmeldingen
+  cancel-in-progress: false
+
+jobs:
+  bewaken:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - name: Status bewaken en meldingen sturen
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          ONLY_TEST: ${{ inputs.test || 'false' }}
+          RUN_MINUTES: "345"
+          INTERVAL_SECONDS: "30"
+        run: |
+          python3 -u - <<'EOF'
+          import json, os, sys, time, urllib.request
+
+          TOPIC = os.environ.get("NTFY_TOPIC", "").strip()
+          if not TOPIC:
+              sys.exit("Secret NTFY_TOPIC ontbreekt: zet jullie groepscode in Settings > Secrets and variables > Actions.")
+          TOKEN = os.environ.get("NTFY_TOKEN", "").strip()
+          API_URL = os.environ.get("API_URL", "https://jotihunt.nl/api/2.0/areas")
+          END = time.time() + float(os.environ.get("RUN_MINUTES", "345")) * 60
+          INTERVAL = float(os.environ.get("INTERVAL_SECONDS", "30"))
+          LABEL = {"red": "ROOD", "orange": "ORANJE", "yellow": "GEEL", "green": "GROEN"}
+          TAG = {"red": "red_circle", "orange": "orange_circle", "yellow": "yellow_circle", "green": "green_circle"}
+          AUTH = {"Authorization": "Bearer " + TOKEN} if TOKEN else {}
+
+          def label(s):
+              return LABEL.get(s, str(s).upper())
+
+          def get_areas():
+              req = urllib.request.Request(API_URL, headers={"User-Agent": "vossenkaart-statusmeldingen", "Cache-Control": "no-cache"})
+              with urllib.request.urlopen(req, timeout=15) as r:
+                  return {a["name"]: a["status"] for a in json.load(r)["data"]}
+
+          def send(topic, title, message, tag, priority):
+              body = json.dumps({"topic": topic, "title": title, "message": message,
+                                 "tags": [tag], "priority": priority}).encode("utf-8")
+              req = urllib.request.Request("https://ntfy.sh/", data=body,
+                                           headers=dict({"Content-Type": "application/json"}, **AUTH))
+              urllib.request.urlopen(req, timeout=15).read()
+
+          def remaining():
+              req = urllib.request.Request("https://ntfy.sh/v1/account", headers=AUTH)
+              with urllib.request.urlopen(req, timeout=15) as r:
+                  a = json.load(r)
+              return a["stats"]["messages_remaining"], a["limits"]["messages"]
+
+          try:
+              left, limit = remaining()
+              print(f"ntfy: nog {left} van {limit} berichten vandaag" + (" (met token)" if TOKEN else " (zonder account, per internetverbinding)"))
+          except Exception as e:
+              print("ntfy-tegoed niet op te vragen:", e)
+
+          if os.environ.get("ONLY_TEST") == "true":
+              send(TOPIC, "Jotihunt testmelding (GitHub)", "Als je dit ziet werken de statusmeldingen via GitHub!", "white_check_mark", 3)
+              print("Testmelding verstuurd.")
+              sys.exit(0)
+
+          prev, fails, warned, last_check = None, 0, False, time.time()
+          while time.time() < END:
+              try:
+                  cur = get_areas()
+                  if prev is None:
+                      print("Start, huidige status:", ", ".join(f"{k}: {label(v)}" for k, v in cur.items()))
+                  else:
+                      for name, new in cur.items():
+                          old = prev.get(name)
+                          if old == new:
+                              continue
+                          msg = f"{name}: {label(old) if old else 'nieuw'} -> {label(new)}"
+                          try:
+                              send(f"{TOPIC}-{name.lower()}", f"{name} is nu {label(new)}", msg,
+                                   TAG.get(new, "fox_face"), 5 if new == "green" else 4)
+                              print(time.strftime("%H:%M:%S UTC"), msg, "(melding verstuurd)")
+                          except Exception as e:
+                              print(time.strftime("%H:%M:%S UTC"), msg, "- melding versturen mislukt:", e)
+                  prev, fails = cur, 0
+              except Exception as e:
+                  fails += 1
+                  print(f"Fout ({fails}):", e)
+
+              # elke 10 minuten het ntfy-tegoed controleren en één keer waarschuwen als het bijna op is
+              if time.time() - last_check > 600:
+                  last_check = time.time()
+                  try:
+                      left, limit = remaining()
+                      print(f"ntfy: nog {left} van {limit} berichten vandaag")
+                      if left < 25 and not warned:
+                          warned = True
+                          send(TOPIC, "Statusmeldingen: berichtentegoed bijna op",
+                               f"Nog {left} ntfy-berichten over voor deze GitHub-taak.", "warning", 3)
+                  except Exception as e:
+                      print("ntfy-tegoed niet op te vragen:", e)
+
+              time.sleep(INTERVAL)
+          print("Tijd om, de volgende taak neemt het over.")
+          EOF
