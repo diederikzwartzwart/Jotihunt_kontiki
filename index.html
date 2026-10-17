@@ -951,6 +951,12 @@ textarea { min-height: 70px; resize: vertical; }
           <div class="msg" id="areaMsg" role="status"></div>
         </div>
         <div class="sect">
+          <p class="label">Alles resetten</p>
+          <p class="small muted">Wist voor iedereen alle hunts, spots, hints, foto's, afgevinkte clubhuizen en live locaties, op de servers én op alle telefoons. De uitgeschakelde gebieden blijven zoals ze zijn. Dit kan niet ongedaan worden; exporteer eerst als je iets wilt bewaren.</p>
+          <button type="button" class="btn danger" id="btnReset">Alles resetten</button>
+          <div class="msg" id="resetMsg" role="status"></div>
+        </div>
+        <div class="sect">
           <p class="label">Exporteren</p>
           <p class="small muted">Alle hunts, spots en hints met huntcodes en RD-coördinaten, als CSV voor Excel.</p>
           <button type="button" class="btn ghost" id="btnExport">Exporteer alles (CSV)</button>
@@ -1260,6 +1266,7 @@ textarea { min-height: 70px; resize: vertical; }
     if (d.type === "delete") return JSON.stringify(["delete", d.id, d.t]);
     if (d.type === "hint") return JSON.stringify(["hint", d.id, d.area, d.lat, d.lon, d.t, d.note || "", d.by || ""]);
     if (d.type === "areas") return JSON.stringify(["areas", (d.disabled || []).join(","), d.t]);
+    if (d.type === "reset") return JSON.stringify(["reset", d.id, d.t]);
     return null;
   }
   async function signEvent(d) {
@@ -1545,6 +1552,7 @@ textarea { min-height: 70px; resize: vertical; }
   var deleted = store.get("deleted:" + code, {});
   var mine = store.get("mine:" + code, {}); // eigen huntcodes: id -> {huntcode, qr}
   var visits = store.get("visits:" + code, {}); // afgevinkte clubhuizen: groeps-id -> {on, t, by}
+  var resetT = store.get("reset:" + code, 0); // alles van vóór de laatste reset door een admin telt niet meer
   var lastId = store.get("lastId:" + code, null);
   var filterArea = store.get("filter", "all");
 
@@ -1563,6 +1571,10 @@ textarea { min-height: 70px; resize: vertical; }
   // Verwerkt een melding uit ntfy of MQTT. Geeft true als er direct iets veranderde.
   function ingest(d) {
     if (!d || typeof d !== "object" || typeof d.id !== "string" || !ID_RE.test(d.id)) return false;
+    if (d.type === "reset") { applyReset(d); return false; }
+    // c = moment van aanmaken (de ingevulde tijd t kan iets vóór de reset liggen)
+    var made = isFinite(d.c) ? +d.c : +d.t;
+    if ((d.type === "hunt" || d.type === "hint" || d.type === "visit") && isFinite(made) && made <= resetT) return false;
     if (d.type === "hunt") {
       if (!AREA_COLORS[d.area] || !isFinite(d.lat) || !isFinite(d.lon)) return false;
       var isNew = !items[d.id];
@@ -1603,6 +1615,21 @@ textarea { min-height: 70px; resize: vertical; }
       return false;
     }
     return false;
+  }
+
+  // Reset door een admin (ondertekend): alles van vóór dat moment wordt op dit apparaat gewist en voortaan genegeerd
+  function applyReset(d, trusted) {
+    if (!d || !isFinite(d.t) || d.t <= resetT) return;
+    (trusted ? Promise.resolve(true) : verifyEvent(d)).then(function (ok) {
+      if (!ok || d.t <= resetT) return;
+      resetT = d.t;
+      store.set("reset:" + code, resetT);
+      items = {}; deleted = {}; visits = {}; mine = {};
+      store.set("mine:" + code, mine);
+      saveItems();
+      if (groupsData.length) renderGroups();
+      renderHunts();
+    });
   }
 
   function visibleItems() {
@@ -1912,6 +1939,7 @@ textarea { min-height: 70px; resize: vertical; }
     var d;
     try { d = JSON.parse(s); } catch (e) { return; }
     if (sub === "config") { applyAreaCfg(d); return; }
+    if (sub === "reset") { applyReset(d); return; }
     if (sub.indexOf("ev/") === 0 || sub.indexOf("del/") === 0 || sub.indexOf("visit/") === 0) { if (ingest(d)) scheduleRender(); }
   }
   function connectMq() {
@@ -1923,7 +1951,7 @@ textarea { min-height: 70px; resize: vertical; }
       });
       c.vkMaxPhoto = b.maxPhoto;
       c.on("connect", function () {
-        c.subscribe([mqBase + "loc/+", mqBase + "ev/+", mqBase + "del/+", mqBase + "visit/+", mqBase + "config"], { qos: 0 });
+        c.subscribe([mqBase + "loc/+", mqBase + "ev/+", mqBase + "del/+", mqBase + "visit/+", mqBase + "config", mqBase + "reset"], { qos: 0 });
         if (sharing && lastSent) publishLoc(c, lastSent);
       });
       c.on("message", onMqMessage);
@@ -2531,7 +2559,7 @@ textarea { min-height: 70px; resize: vertical; }
       v: 2, type: "hunt", kind: kind, id: id, area: selArea,
       lat: +pos.lat.toFixed(6), lon: +pos.lon.toFixed(6),
       acc: pos.acc ? Math.round(pos.acc) : null,
-      t: t, rx: rd.x, ry: rd.y,
+      t: t, c: Date.now(), rx: rd.x, ry: rd.y,
       by: $("huntBy").value.trim().slice(0, 40),
       note: $("huntNote").value.trim().slice(0, 200),
       photo: !!photoBlob
@@ -2675,6 +2703,7 @@ textarea { min-height: 70px; resize: vertical; }
         v: 2, type: "hint", id: uid(), area: area,
         lat: +hintPos.lat.toFixed(6), lon: +hintPos.lon.toFixed(6),
         t: timeToday($("hintTime").value),
+        c: Date.now(),
         note: $("hintNote").value.trim().slice(0, 120),
         by: getName()
       });
@@ -2727,6 +2756,49 @@ textarea { min-height: 70px; resize: vertical; }
       $("areaMsg").textContent = "Opslaan mislukt: " + err.message;
     }
   }
+
+  // Alles resetten: alle bewaarde berichten op beide MQTT-servers leegmaken en een ondertekende reset sturen
+  var resetConfirm = false;
+  $("btnReset").addEventListener("click", async function () {
+    if (!isAdmin || !signPriv) return;
+    var btn = this, msg = $("resetMsg");
+    if (!resetConfirm) {
+      resetConfirm = true;
+      btn.textContent = "Zeker weten? Tik nogmaals om alles te wissen";
+      setTimeout(function () { resetConfirm = false; btn.textContent = "Alles resetten"; }, 8000);
+      return;
+    }
+    resetConfirm = false;
+    btn.disabled = true;
+    msg.dataset.kind = "";
+    msg.textContent = "Bewaarde berichten opzoeken…";
+    try {
+      // 1. alle bewaarde (retained) topics onder deze groep verzamelen
+      var found = {};
+      var collect = function (topic) { if (topic.indexOf(mqBase) === 0) found[topic.slice(mqBase.length)] = true; };
+      clients.forEach(function (c) { c.on("message", collect); c.subscribe(mqBase + "#", { qos: 0 }); });
+      await new Promise(function (r) { setTimeout(r, 5000); });
+      clients.forEach(function (c) { c.removeListener("message", collect); c.unsubscribe(mqBase + "#"); });
+      // 2. leegmaken (instellingen voor gebieden blijven staan)
+      var subs = Object.keys(found).filter(function (s) { return s !== "config" && s !== "reset"; });
+      if (sharing) setSharing(false);
+      subs.forEach(function (s) { clients.forEach(function (c) { c.publish(mqBase + s, "", { qos: 0, retain: true }); }); });
+      // 3. ondertekende reset voor alle telefoons (ook voor oude meldingen die ntfy nog 12 uur bewaart)
+      var d = await signEvent({ v: 2, type: "reset", id: uid(), t: Date.now() });
+      var json = JSON.stringify(d);
+      mqPublish("reset", json);
+      publish({ topic: topicData, message: json, tags: ["broom"] }).catch(function () {});
+      applyReset(d, true);
+      team = {}; teamLayer.clearLayers(); updateTeamCount();
+      msg.dataset.kind = "ok";
+      msg.textContent = "Alles is gewist (" + subs.length + " bewaarde berichten). Telefoons die open staan worden direct leeggemaakt, de rest zodra ze de Vossenkaart openen.";
+    } catch (err) {
+      msg.dataset.kind = "err";
+      msg.textContent = "Reset mislukt: " + err.message + ". Controleer de verbinding en probeer opnieuw.";
+    }
+    btn.disabled = false;
+    btn.textContent = "Alles resetten";
+  });
 
   function csvCell(v) {
     var s = v == null ? "" : String(v);
